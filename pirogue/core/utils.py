@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 
-def table_parts(self, name: str) -> (str, str):
+def table_parts(name: str) -> (str, str):
     """
     Returns a tuple with schema and table names
-    :param self:
     :param name:
     :return:
     """

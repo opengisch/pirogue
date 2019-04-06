@@ -10,12 +10,12 @@ class Join:
     Creates a simple join view with associated triggers to edit.
     """
 
-    def __init__(self, table_a: str, table_b: str, pg_service: str=None, destination_schema: str=None):
+    def __init__(self, pg_service: str, table_a: str, table_b: str, destination_schema: str=None):
         """
         Produces the SQL code of the join table and triggers
+        :param pg_service:
         :param table_a:
         :param table_b:
-        :param pg_service:
         :param destination_schema: the schema where the view will written to
         """
 
@@ -40,6 +40,8 @@ class Join:
         :return:
         """
         sql = self.__view()
+
+        print(sql)
 
         return True
 
