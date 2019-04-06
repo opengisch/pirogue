@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+import argparse
+
+from pirogue.core.join import Join
+
+
+if __name__ == "__main__":
+    """
+    Main process
+    """
+
+    # create the top-level parser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--version", help="print the version and exit", action='store_true')
+
+    subparsers = parser.add_subparsers(title='commands', description='pirogue command', dest='command')
+
+    # simple join view
+    join_parser = subparsers.add_parser('join', help='create a simple join view')
+    join_parser.add_argument('table_a')
+    join_parser.add_argument('table_b')
+    join_parser.add_argument('-p', '--pg_service', help='postgres service')
+
+    args = parser.parse_args()
+
+    # print the version and exit
+    if args.version:
+        print('pirogue version: {}'.format('[DEV]'))
+        parser.exit()
+
+    # if no command is passed, print the help and exit
+    if not args.command:
+        parser.print_help()
+        parser.exit()
+
+    exit_val = 0
+
+    if args.command == 'join':
+        success = Join(args.pg_service, args.table_a, args.table_b).create()
+        if not success:
+            exit_val = 1
+
+    exit(exit_val)
