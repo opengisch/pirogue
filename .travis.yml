@@ -1,0 +1,23 @@
+language: python
+
+python:
+  - 3.6
+
+addons:
+  postgresql: "9.6"
+
+env:
+  global:
+    - PGUSER=postgres
+
+install: pip install -r requirements.txt
+
+script:
+  - ./.ci/setup_db.sh
+  - ./test/test_pirogue.sh
+
+deploy:
+  provider: script
+  script: ./.deploy/deploy_to_pypi.sh
+  on:
+    tags: true
