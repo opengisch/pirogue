@@ -3,7 +3,7 @@
 import argparse
 import os
 
-from pirogue.core.join import Join
+from pirogue.join import Join
 
 
 if __name__ == "__main__":

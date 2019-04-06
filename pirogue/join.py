@@ -3,7 +3,7 @@
 import psycopg2
 import psycopg2.extras
 
-from pirogue.core.utils import table_parts
+from pirogue.utils import table_parts
 
 class Join:
     """
@@ -51,5 +51,5 @@ class Join:
         :return: the SQL code
         """
         sql = "CREATE OR REPLACE VIEW {ds}.{dt}".format(ds=self.destination_schema, dt=self.destination_table)
-        return True
+        return sql
 
