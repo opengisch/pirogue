@@ -11,4 +11,4 @@ dropdb --if-exists ${pirogue_test_db}
 createdb ${pirogue_test_db}
 
 
-PGSERVICE=pirogue_test psql --quiet -v ON_ERROR_STOP=on -f ${DIR}/data/create_northwind.sql;
+PGSERVICE=pirogue_test psql --quiet -v ON_ERROR_STOP=on -f ${DIR}/data/demo_data.sql;

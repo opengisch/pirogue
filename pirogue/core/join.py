@@ -31,7 +31,6 @@ class Join:
 
         self.destination_table = 'vw_{ta}_{tb}'.format(ta=self.table_a, tb=self.table_b)
 
-
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cur = self.conn.cursor()
 
