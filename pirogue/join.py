@@ -4,6 +4,7 @@ import psycopg2
 import psycopg2.extras
 
 from pirogue.utils import table_parts
+from pirogue.information_schema import columns
 
 class Join:
     """
@@ -34,6 +35,7 @@ class Join:
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cur = self.conn.cursor()
 
+
     def create(self) -> bool:
         """
 
@@ -50,6 +52,8 @@ class Join:
         Create the SQL code for the view
         :return: the SQL code
         """
-        sql = "CREATE OR REPLACE VIEW {ds}.{dt}".format(ds=self.destination_schema, dt=self.destination_table)
+        sql = "CREATE OR REPLACE VIEW {ds}.{dt}\n".format(ds=self.destination_schema, dt=self.destination_table)
+        a_cols = columns(self.cur, self.schema_a, self.table_a)
+        sql += ', '.join(a_cols)
         return sql
 
