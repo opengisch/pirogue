@@ -3,7 +3,7 @@
 import argparse
 import os
 
-from pirogue.join import Join
+from pirogue.join import Join, JoinType
 
 
 if __name__ == "__main__":
@@ -23,6 +23,9 @@ if __name__ == "__main__":
     join_parser = subparsers.add_parser('join', help='create a simple join view')
     join_parser.add_argument('table_a')
     join_parser.add_argument('table_b')
+    join_parser.add_argument('-s', '--output-schema', help='schema for the created join view')
+    join_parser.add_argument('-t', '--join-type', help='the type of join: LEFT (default), RIGHT, FULL or INNER.')
+
 
     args = parser.parse_args()
 
@@ -44,7 +47,10 @@ if __name__ == "__main__":
         pg_service = os.getenv('PGSERVICE')
 
     if args.command == 'join':
-        success = Join(pg_service, args.table_a, args.table_b).create()
+        join_type = JoinType(args.join_type.upper()) if args.join_type else JoinType.LEFT
+        success = Join(pg_service, args.table_a, args.table_b,
+                       output_schema=args.output_schema,
+                       join_type=join_type).create()
         if not success:
             exit_val = 1
 

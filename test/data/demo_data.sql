@@ -13,12 +13,12 @@ CREATE TABLE pirogue_test.cat_breed ( id integer PRIMARY KEY, name text );
 CREATE TABLE pirogue_test.dog_breed ( id integer PRIMARY KEY, name text );
 
 CREATE TABLE pirogue_test.cat (
-	id integer REFERENCES pirogue_test.animal,
+	cid integer REFERENCES pirogue_test.animal,
 	fk_breed integer REFERENCES pirogue_test.cat_breed,
 	eye_color text); -- not in top class, as some animals might not have eyes
 
 CREATE TABLE pirogue_test.dog (
-	id integer REFERENCES pirogue_test.animal,
+	did integer REFERENCES pirogue_test.animal,
 	fk_breed integer REFERENCES pirogue_test.dog_breed,
 	eye_color text);
 
