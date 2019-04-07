@@ -6,7 +6,7 @@ import psycopg2.extras
 from enum import Enum
 
 from pirogue.utils import table_parts
-from pirogue.information_schema import columns, reference_columns
+from pirogue.information_schema import columns, reference_columns, primary_key, default_value
 
 
 class JoinType(Enum):
@@ -46,11 +46,15 @@ class Join:
         else:
             self.output_schema = output_schema
 
-        self.output_view = 'vw_{ta}_{tb}'.format(ta=self.table_a, tb=self.table_b)
+        self.output_view = "vw_{ta}_{tb}".format(ta=self.table_a, tb=self.table_b)
 
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cur = self.conn.cursor()
 
+        self.a_cols = columns(self.cur, self.schema_a, self.table_a)
+        self.b_cols = columns(self.cur, self.schema_b, self.table_b)
+        self.b_pkey = primary_key(self.cur, self.schema_b, self.table_b)
+        self.b_cols_wo_pkey = columns(self.cur, self.schema_b, self.table_b, True)
 
     def create(self) -> bool:
         """
@@ -59,8 +63,8 @@ class Join:
         """
         sql = self.__view()
 
-        print(self.cur.execute(sql))
-        print(self.conn.commit())
+        self.cur.execute(sql)
+        self.conn.commit()
 
         print(sql)
 
@@ -71,19 +75,14 @@ class Join:
         Create the SQL code for the view
         :return: the SQL code
         """
-        a_cols = columns(self.cur, self.schema_a, self.table_a)
-        b_cols = columns(self.cur, self.schema_b, self.table_b, True)
 
         (ref_a_key, ref_b_key) = reference_columns(self.cur, self.schema_a, self.table_a, self.schema_b, self.table_b)
 
-        sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS\n".format(ds=self.output_schema, dt=self.output_view)
-        sql += "  SELECT "
-
-        sql += ', '.join(a_cols)
-
-        if len(b_cols):
-            sql += ', ' + ', '.join(b_cols) + '\n'
-        sql += "  FROM {sa}.{ta} \n" \
+        sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS SELECT \n".format(ds=self.output_schema, dt=self.output_view)
+        sql += ", ".join(self.a_cols)
+        if len(self.b_cols_wo_pkey):
+            sql += ', ' + ', '.join(self.b_cols_wo_pkey) + '\n'
+        sql += " FROM {sa}.{ta} \n" \
                " {jt} JOIN {sb}.{tb} ON {tb}.{rbk} = {ta}.{rak};\n" \
             .format(jt=self.join_type.value,
                     sa=self.schema_a,
@@ -92,7 +91,53 @@ class Join:
                     sb=self.schema_b,
                     tb=self.table_b,
                     rbk=ref_b_key)
-
-
         return sql
 
+
+    def __insert_trigger(self) -> str:
+        """
+
+        :return:
+        """
+
+        sql = "CREATE OR REPLACE FUNCTION {ds}.{dt}() RETURNS trigger AS\n" \
+              "$BODY$\n" \
+              "BEGIN\n" \
+              "INSERT INTO {sb}.{tb} ( {b_cols} )\n" \
+              "VALUES ( COALESCE( NEW.{bpk}, {bkp_def} ),
+           , NEW.identifier
+           , NEW.remark
+           , NEW.renovation_demand
+           , NEW.fk_dataowner
+           , NEW.fk_provider
+           , NEW.last_modification
+           , NEW.fk_wastewater_structure
+           )
+           RETURNING obj_id INTO NEW.obj_id;
+
+INSERT INTO qgep_od.access_aid (
+             obj_id
+           , kind
+           )
+          VALUES (
+            NEW.obj_id -- obj_id
+           , NEW.kind
+           );
+  RETURN NEW;
+END; $BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+
+-- DROP TRIGGER vw_access_aid_ON_INSERT ON qgep_od.access_aid;
+
+CREATE TRIGGER vw_access_aid_ON_INSERT INSTEAD OF INSERT ON qgep_od.vw_access_aid
+  FOR EACH ROW EXECUTE PROCEDURE qgep_od.vw_access_aid_insert();"
+.format(ds=self.output_schema,
+        dt=self.output_view,
+           sa=self.schema_a,
+                    ta=self.table_a,
+                    sb=self.schema_b,
+                    tb=self.table_b,
+        b_cols=self.b_cols,
+bpk=self.b_pkey,
+bkp_def=default_value(self.cur, self.schema_b, self.table_a, self.b_pkey))

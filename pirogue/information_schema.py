@@ -82,3 +82,26 @@ def reference_columns(pg_cur: cursor,
     return cols
 
 
+def default_value(pg_cur: cursor, table_schema: str, table_name: str, column: str) -> str:
+    """
+    Returns the default value of the column
+    :param pg_cur:
+    :param table_schema:
+    :param table_name:
+    :param column:
+    :return:
+    """
+    # see https://stackoverflow.com/a/8148177/1548052
+
+    sql = "SELECT d.adsrc AS default_value " \
+          "FROM pg_catalog.pg_attribute a " \
+          "LEFT JOIN pg_catalog.pg_attrdef d ON (a.attrelid, a.attnum) = (d.adrelid,  d.adnum) " \
+          "WHERE  NOT a.attisdropped   -- no dropped (dead) columns " \
+          "AND    a.attnum > 0         -- no system columns " \
+          "AND    a.attrelid = '{ts}.{tn}'::regclass " \
+          "AND    a.attname = '{col}';" \
+        .format(ts=table_schema,
+                tn=table_name,
+                col=column)
+    pg_cur.execute(sql)
+    return pg_cur.fetchone()[0]
