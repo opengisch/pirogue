@@ -6,4 +6,4 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 export PYTHONPATH=${DIR}/..:${PYTHONPATH}
 
-PGSERVICE=pirogue_test ${DIR}/../scripts/pirogue join pirogue_test.animal pirogue_test.cat
+PGSERVICE=pirogue_test ${DIR}/../scripts/pirogue join pirogue_test.cat pirogue_test.animal

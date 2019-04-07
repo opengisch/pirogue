@@ -48,8 +48,8 @@ def columns(pg_cur: cursor, schema: str, table: str, remove_pkey: bool=False) ->
 
 
 def reference_columns(pg_cur: cursor,
-              table_schema: str, table_name: str,
-              foreign_table_schema: str, foreign_table_name: str) -> (str, str):
+                      table_schema: str, table_name: str,
+                      foreign_table_schema: str, foreign_table_name: str) -> (str, str):
     """
     Returns the columns use in a reference constraint
     :param pg_cur:
@@ -78,7 +78,7 @@ def reference_columns(pg_cur: cursor,
                                                    fts=foreign_table_schema)
     pg_cur.execute(sql)
     cols = pg_cur.fetchone()
-    assert len(cols)==2
+    assert len(cols) == 2
     return cols
 
 
