@@ -66,6 +66,8 @@ class Join:
         sql = self.__view()
         sql += self.__insert_trigger()
 
+        print(default_value(self.cur, self.schema_b, self.table_b, self.b_pkey))
+
         self.cur.execute(sql)
         self.conn.commit()
 
@@ -105,9 +107,9 @@ class Join:
               "$BODY$\n" \
               "BEGIN\n" \
               "INSERT INTO {sb}.{tb}\n" \
-              "    ( {b_cols} )\n" \
+              "     ( {b_cols} )\n" \
               "  VALUES (\n" \
-              "    COALESCE( NEW.{bpk}, {bkp_def} ),\n" \
+              "    COALESCE( NEW.{rak}, {bkp_def} ),\n" \
               "    {b_new_cols}\n" \
               "  )\n" \
               "  RETURNING {bpk} INTO NEW.{rak};\n" \
@@ -130,7 +132,7 @@ class Join:
                     tb=self.table_b,
                     b_cols=list2str(self.b_cols),
                     bpk=self.b_pkey,
-                    bkp_def=default_value(self.cur, self.schema_b, self.table_a, self.b_pkey),
+                    bkp_def=default_value(self.cur, self.schema_b, self.table_b, self.b_pkey),
                     b_new_cols=list2str(self.b_cols_wo_pkey, prepend='NEW.'))
 
         return sql

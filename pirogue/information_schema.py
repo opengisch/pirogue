@@ -93,15 +93,15 @@ def default_value(pg_cur: cursor, table_schema: str, table_name: str, column: st
     """
     # see https://stackoverflow.com/a/8148177/1548052
 
-    sql = "SELECT d.adsrc AS default_value " \
-          "FROM pg_catalog.pg_attribute a " \
-          "LEFT JOIN pg_catalog.pg_attrdef d ON (a.attrelid, a.attnum) = (d.adrelid,  d.adnum) " \
-          "WHERE  NOT a.attisdropped   -- no dropped (dead) columns " \
-          "AND    a.attnum > 0         -- no system columns " \
-          "AND    a.attrelid = '{ts}.{tn}'::regclass " \
+    sql = "SELECT d.adsrc AS default_value\n" \
+          "FROM pg_catalog.pg_attribute a\n" \
+          "LEFT JOIN pg_catalog.pg_attrdef d ON (a.attrelid, a.attnum) = (d.adrelid,  d.adnum)\n" \
+          "WHERE  NOT a.attisdropped   -- no dropped (dead) columns\n" \
+          "AND    a.attnum > 0         -- no system columns\n" \
+          "AND    a.attrelid = '{ts}.{tn}'::regclass\n" \
           "AND    a.attname = '{col}';" \
         .format(ts=table_schema,
                 tn=table_name,
                 col=column)
     pg_cur.execute(sql)
-    return pg_cur.fetchone()[0]
+    return pg_cur.fetchone()[0] or 'NULL'
