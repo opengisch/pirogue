@@ -70,6 +70,7 @@ class Join:
         sql = self.__view()
         sql += self.__insert_trigger()
         sql += self.__update_trigger()
+        sql += self.__delete_trigger()
 
         self.cur.execute(sql)
         self.conn.commit()
@@ -103,7 +104,7 @@ class Join:
         :return:
         """
         sql = "-- INSERT TRIGGER\n" \
-              "CREATE OR REPLACE FUNCTION {ds}.tr_{dt}_insert() RETURNS trigger AS\n" \
+              "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_insert() RETURNS trigger AS\n" \
               "$BODY$\n" \
               "BEGIN\n" \
               "INSERT INTO {sb}.{tb}\n" \
@@ -121,7 +122,7 @@ class Join:
               "LANGUAGE plpgsql;\n\n" \
               "CREATE TRIGGER tr_{dt}_on_insert\n" \
               "  INSTEAD OF INSERT ON {ds}.{dt}\n" \
-              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.tr_{dt}_insert();\n\n"\
+              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_insert();\n\n"\
             .format(ds=self.output_schema,
                     dt=self.output_view,
                     sa=self.schema_a,
@@ -139,7 +140,7 @@ class Join:
 
     def __update_trigger(self):
         sql = "-- UPDATE TRIGGER\n" \
-              "CREATE OR REPLACE FUNCTION {ds}.tr_{dt}_update() RETURNS trigger AS\n " \
+              "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_update() RETURNS trigger AS\n " \
               "$BODY$\n" \
               "BEGIN\n" \
               "  UPDATE {sa}.{ta}\n    SET {a_up_cols}\n    WHERE {apk} = OLD.{apk};\n" \
@@ -150,17 +151,40 @@ class Join:
               "LANGUAGE plpgsql;\n\n" \
               "CREATE TRIGGER tr_{dt}_on_update\n" \
               "  INSTEAD OF UPDATE ON {ds}.{dt}\n" \
-              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.tr_{dt}_update();\n\n" \
+              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_update();\n\n" \
             .format(ds=self.output_schema,
                     dt=self.output_view,
                     sa=self.schema_a,
                     ta=self.table_a,
                     apk=self.a_pkey,
-                    a_cols=list2str(self.a_cols),
                     a_up_cols=update_columns(self.a_cols),
                     sb=self.schema_b,
                     tb=self.table_b,
                     bpk=self.b_pkey,
                     rak=self.ref_a_key,
                     b_up_cols=update_columns(self.b_cols_wo_pkey))
+        return sql
+
+    def __delete_trigger(self):
+        sql = "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_delete() RETURNS trigger AS\n" \
+              "$BODY$\n" \
+              "BEGIN\n" \
+              "  DELETE FROM {sa}.{ta} WHERE {apk} = OLD.{apk};\n" \
+              "  DELETE FROM {sb}.{tb} WHERE {bpk} = OLD.{rak};\n" \
+              "RETURN NULL;\n" \
+              "END;\n" \
+              "$BODY$\n" \
+              "LANGUAGE plpgsql;\n\n" \
+              "CREATE TRIGGER tr_{dt}_on_delete\n" \
+              "  INSTEAD OF DELETE ON {ds}.{dt}\n" \
+              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_delete();\n\n" \
+            .format(ds=self.output_schema,
+                    dt=self.output_view,
+                    sa=self.schema_a,
+                    ta=self.table_a,
+                    apk=self.a_pkey,
+                    sb=self.schema_b,
+                    tb=self.table_b,
+                    bpk=self.b_pkey,
+                    rak=self.ref_a_key)
         return sql
