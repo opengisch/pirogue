@@ -80,29 +80,27 @@ class Join:
         Create the SQL code for the view
         :return: the SQL code
         """
-
-        sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS SELECT \n".format(ds=self.output_schema, dt=self.output_view)
-        sql += ", ".join(self.a_cols)
-        if len(self.b_cols_wo_pkey):
-            sql += ', ' + ', '.join(self.b_cols_wo_pkey) + '\n'
-        sql += " FROM {sa}.{ta} \n" \
-               " {jt} JOIN {sb}.{tb} ON {tb}.{rbk} = {ta}.{rak};\n" \
-            .format(jt=self.join_type.value,
+        sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS SELECT\n  {a_cols}{b_cols}\n" \
+              "  FROM {sa}.{ta} \n" \
+              "  {jt} JOIN {sb}.{tb} ON {tb}.{rbk} = {ta}.{rak};\n"\
+            .format(ds=self.output_schema,
+                    dt=self.output_view,
+                    jt=self.join_type.value,
                     sa=self.schema_a,
                     ta=self.table_a,
                     rak=self.ref_a_key,
+                    a_cols=list2str(self.a_cols),
                     sb=self.schema_b,
                     tb=self.table_b,
-                    rbk=self.ref_b_key)
+                    rbk=self.ref_b_key,
+                    b_cols=list2str(self.b_cols_wo_pkey, prepend_to_list=', '))
         return sql
-
 
     def __insert_trigger(self) -> str:
         """
 
         :return:
         """
-
         sql = "CREATE OR REPLACE FUNCTION {ds}.tr_{dt}_insert() RETURNS trigger AS\n" \
               "$BODY$\n" \
               "BEGIN\n" \
@@ -134,5 +132,4 @@ class Join:
                     bpk=self.b_pkey,
                     bkp_def=default_value(self.cur, self.schema_b, self.table_b, self.b_pkey),
                     b_new_cols=list2str(self.b_cols_wo_pkey, prepend='NEW.'))
-
         return sql

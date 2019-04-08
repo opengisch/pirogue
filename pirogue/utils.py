@@ -13,13 +13,16 @@ def table_parts(name: str) -> (str, str):
         return 'public', name
 
 
-def list2str(elements: list, sep: str= ', ', prepend: str='', append: str='') -> list:
+def list2str(elements: list, sep: str= ', ', prepend: str='', append: str='', prepend_to_list: str='') -> list:
     """
     Prepend to all strings in the list
     :param elements:
     :param sep: separator
     :param prepend:
     :param append:
+    :param prepend_to_list: prepend to the return string, if elements is not None or empty
     :return:
     """
-    return sep.join([prepend+x+append for x in elements])
+    if elements is None or len(elements) == 0:
+        return ''
+    return prepend_to_list + sep.join([prepend+x+append for x in elements])
