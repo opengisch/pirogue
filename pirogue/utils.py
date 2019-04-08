@@ -13,7 +13,7 @@ def table_parts(name: str) -> (str, str):
         return 'public', name
 
 
-def list2str(elements: list, sep: str= ', ', prepend: str='', append: str='', prepend_to_list: str='') -> list:
+def list2str(elements: list, sep: str= ', ', prepend: str='', append: str='', prepend_to_list: str='') -> str:
     """
     Prepend to all strings in the list
     :param elements:
@@ -26,3 +26,7 @@ def list2str(elements: list, sep: str= ', ', prepend: str='', append: str='', pr
     if elements is None or len(elements) == 0:
         return ''
     return prepend_to_list + sep.join([prepend+x+append for x in elements])
+
+
+def update_columns(columns: list) -> str:
+    return ", ".join(["{c} = NEW.{c}".format(c=col) for col in columns])

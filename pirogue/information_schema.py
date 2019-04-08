@@ -3,6 +3,10 @@
 from psycopg2.extensions import cursor
 
 
+class TableHasNoPrimaryKey(Exception):
+    pass
+
+
 def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
     """
     Returns the primary of a table
@@ -19,7 +23,10 @@ def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
           " AND t.table_schema = '{s}'"\
           " AND t.constraint_type = 'PRIMARY KEY'".format(s=schema, t=table)
     pg_cur.execute(sql)
-    pkey = pg_cur.fetchone()[0]
+    try:
+        pkey = pg_cur.fetchone()[0]
+    except Exception:
+        raise TableHasNoPrimaryKey(sql)
     return pkey
 
 
