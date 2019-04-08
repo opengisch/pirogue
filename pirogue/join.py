@@ -5,7 +5,7 @@ import psycopg2.extras
 
 from enum import Enum
 
-from pirogue.utils import table_parts
+from pirogue.utils import table_parts, list2str
 from pirogue.information_schema import columns, reference_columns, primary_key, default_value
 
 
@@ -53,8 +53,10 @@ class Join:
 
         self.a_cols = columns(self.cur, self.schema_a, self.table_a)
         self.b_cols = columns(self.cur, self.schema_b, self.table_b)
+        (self.ref_a_key, self.ref_b_key) = reference_columns(self.cur, self.schema_a, self.table_a, self.schema_b, self.table_b)
         self.b_pkey = primary_key(self.cur, self.schema_b, self.table_b)
         self.b_cols_wo_pkey = columns(self.cur, self.schema_b, self.table_b, True)
+
 
     def create(self) -> bool:
         """
@@ -62,6 +64,7 @@ class Join:
         :return:
         """
         sql = self.__view()
+        sql += self.__insert_trigger()
 
         self.cur.execute(sql)
         self.conn.commit()
@@ -76,8 +79,6 @@ class Join:
         :return: the SQL code
         """
 
-        (ref_a_key, ref_b_key) = reference_columns(self.cur, self.schema_a, self.table_a, self.schema_b, self.table_b)
-
         sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS SELECT \n".format(ds=self.output_schema, dt=self.output_view)
         sql += ", ".join(self.a_cols)
         if len(self.b_cols_wo_pkey):
@@ -87,10 +88,10 @@ class Join:
             .format(jt=self.join_type.value,
                     sa=self.schema_a,
                     ta=self.table_a,
-                    rak=ref_a_key,
+                    rak=self.ref_a_key,
                     sb=self.schema_b,
                     tb=self.table_b,
-                    rbk=ref_b_key)
+                    rbk=self.ref_b_key)
         return sql
 
 
@@ -100,44 +101,36 @@ class Join:
         :return:
         """
 
-        sql = "CREATE OR REPLACE FUNCTION {ds}.{dt}() RETURNS trigger AS\n" \
+        sql = "CREATE OR REPLACE FUNCTION {ds}.tr_{dt}_insert() RETURNS trigger AS\n" \
               "$BODY$\n" \
               "BEGIN\n" \
-              "INSERT INTO {sb}.{tb} ( {b_cols} )\n" \
-              "VALUES ( COALESCE( NEW.{bpk}, {bkp_def} ),
-           , NEW.identifier
-           , NEW.remark
-           , NEW.renovation_demand
-           , NEW.fk_dataowner
-           , NEW.fk_provider
-           , NEW.last_modification
-           , NEW.fk_wastewater_structure
-           )
-           RETURNING obj_id INTO NEW.obj_id;
-
-INSERT INTO qgep_od.access_aid (
-             obj_id
-           , kind
-           )
-          VALUES (
-            NEW.obj_id -- obj_id
-           , NEW.kind
-           );
-  RETURN NEW;
-END; $BODY$
-  LANGUAGE plpgsql VOLATILE
-  COST 100;
-
--- DROP TRIGGER vw_access_aid_ON_INSERT ON qgep_od.access_aid;
-
-CREATE TRIGGER vw_access_aid_ON_INSERT INSTEAD OF INSERT ON qgep_od.vw_access_aid
-  FOR EACH ROW EXECUTE PROCEDURE qgep_od.vw_access_aid_insert();"
-.format(ds=self.output_schema,
-        dt=self.output_view,
-           sa=self.schema_a,
+              "INSERT INTO {sb}.{tb}\n" \
+              "    ( {b_cols} )\n" \
+              "  VALUES (\n" \
+              "    COALESCE( NEW.{bpk}, {bkp_def} ),\n" \
+              "    {b_new_cols}\n" \
+              "  )\n" \
+              "  RETURNING {bpk} INTO NEW.{rak};\n" \
+              "INSERT INTO {sa}.{ta} ( {a_cols} )\n" \
+              "  VALUES ( {a_new_cols} );\n" \
+              "RETURN NEW;\n" \
+              "END; $BODY$\n" \
+              "LANGUAGE plpgsql;\n\n" \
+              "CREATE TRIGGER tr_{dt}_on_insert\n" \
+              "  INSTEAD OF INSERT ON {ds}.{dt}" \
+              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.tr_{dt}_insert();"\
+            .format(ds=self.output_schema,
+                    dt=self.output_view,
+                    sa=self.schema_a,
                     ta=self.table_a,
+                    rak=self.ref_a_key,
+                    a_cols=list2str(self.a_cols),
+                    a_new_cols=list2str(self.a_cols, prepend='NEW.'),
                     sb=self.schema_b,
                     tb=self.table_b,
-        b_cols=self.b_cols,
-bpk=self.b_pkey,
-bkp_def=default_value(self.cur, self.schema_b, self.table_a, self.b_pkey))
+                    b_cols=list2str(self.b_cols),
+                    bpk=self.b_pkey,
+                    bkp_def=default_value(self.cur, self.schema_b, self.table_a, self.b_pkey),
+                    b_new_cols=list2str(self.b_cols_wo_pkey, prepend='NEW.'))
+
+        return sql
