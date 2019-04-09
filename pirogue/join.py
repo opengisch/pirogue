@@ -113,12 +113,9 @@ class Join:
               "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_insert() RETURNS trigger AS\n" \
               "$BODY$\n" \
               "BEGIN\n" \
-              "INSERT INTO {sb}.{tb}\n" \
-              "     ( {b_cols} )\n" \
+              "INSERT INTO {sb}.{tb} ( {b_cols} )\n" \
               "  VALUES (\n" \
-              "    COALESCE( NEW.{rak}, {bkp_def} ),\n" \
-              "    {b_new_cols}\n" \
-              "  )\n" \
+              "    COALESCE( NEW.{rak}, {bkp_def} ), {b_new_cols} )\n" \
               "  RETURNING {bpk} INTO NEW.{rak};\n" \
               "INSERT INTO {sa}.{ta} ( {a_cols} )\n" \
               "  VALUES ( {a_new_cols} );\n" \
@@ -134,14 +131,14 @@ class Join:
                     sa=self.schema_a,
                     ta=self.table_a,
                     rak=self.ref_a_key,
-                    a_cols=list2str(self.a_cols),
-                    a_new_cols=list2str(self.a_cols, prepend='NEW.'),
+                    a_cols=list2str(self.a_cols, prepend='\n    '),
+                    a_new_cols=list2str(self.a_cols, prepend='\n    NEW.', append=''),
                     sb=self.schema_b,
                     tb=self.table_b,
-                    b_cols=list2str(self.b_cols),
+                    b_cols=list2str(self.b_cols, prepend='\n    '),
                     bpk=self.b_pkey,
                     bkp_def=default_value(self.cur, self.schema_b, self.table_b, self.b_pkey),
-                    b_new_cols=list2str(self.b_cols_wo_pkey, prepend='NEW.'))
+                    b_new_cols=list2str(self.b_cols_wo_pkey, prepend='\n    NEW.', append=''))
         return sql
 
     def __update_trigger(self):
