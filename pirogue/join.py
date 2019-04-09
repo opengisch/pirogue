@@ -22,14 +22,16 @@ class Join:
     """
 
     def __init__(self, pg_service: str, table_a: str, table_b: str,
-                 output_schema: str=None,
+                 view_schema: str=None,
+                 view_name: str=None,
                  join_type: JoinType=JoinType.LEFT):
         """
         Produces the SQL code of the join table and triggers
         :param pg_service:
         :param table_a:
         :param table_b:
-        :param output_schema: the schema where the view will written to
+        :param view_schema: the schema where the view will written to
+        :param view_name: the name of the created view, defaults to vw_{table_a}_{table_b}
         :param join_type: the type of join
         """
 
@@ -38,15 +40,15 @@ class Join:
 
         self.join_type = join_type
 
-        if output_schema is None:
+        if view_schema is None:
             if self.schema_a != self.schema_b:
                 raise ValueError('Destination schema cannot be guessed if different on sources tables.')
             else:
-                self.output_schema = self.schema_a
+                self.view_schema = self.schema_a
         else:
-            self.output_schema = output_schema
+            self.view_schema = view_schema
 
-        self.output_view = "vw_{ta}_{tb}".format(ta=self.table_a, tb=self.table_b)
+        self.view_name = view_name or "vw_{ta}_{tb}".format(ta=self.table_a, tb=self.table_b)
 
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cur = self.conn.cursor()
@@ -60,21 +62,25 @@ class Join:
             self.a_pkey = self.ref_a_key
         self.b_pkey = primary_key(self.cur, self.schema_b, self.table_b)
         self.b_cols_wo_pkey = columns(self.cur, self.schema_b, self.table_b, True)
-
+        self.a_cols_wo_pkey = list(self.a_cols)  # make a copy, otherwise keeps reference
+        self.a_cols_wo_pkey.remove(self.a_pkey)
 
     def create(self) -> bool:
         """
 
         :return:
         """
-        sql = self.__view()
-        sql += self.__insert_trigger()
-        sql += self.__update_trigger()
-        sql += self.__delete_trigger()
 
-        self.cur.execute(sql)
+        for sql in [self.__view(),
+                    self.__insert_trigger(),
+                    self.__update_trigger(),
+                    self.__delete_trigger()]:
+            try:
+                self.cur.execute(sql)
+            except psycopg2.Error as e:
+                print("*** Failing:\n{}\n***".format(sql))
+                raise e
         self.conn.commit()
-
         return True
 
     def __view(self) -> str:
@@ -83,19 +89,19 @@ class Join:
         :return: the SQL code
         """
         sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS SELECT\n  {a_cols}{b_cols}\n" \
-              "  FROM {sa}.{ta} \n" \
-              "  {jt} JOIN {sb}.{tb} ON {tb}.{rbk} = {ta}.{rak};\n\n"\
-            .format(ds=self.output_schema,
-                    dt=self.output_view,
+              "  FROM {sa}.{ta} AS a\n" \
+              "  {jt} JOIN {sb}.{tb} AS b ON b.{rbk} = a.{rak};\n\n"\
+            .format(ds=self.view_schema,
+                    dt=self.view_name,
                     jt=self.join_type.value,
                     sa=self.schema_a,
                     ta=self.table_a,
                     rak=self.ref_a_key,
-                    a_cols=list2str(self.a_cols),
+                    a_cols=list2str(self.a_cols, prepend='a.'),
                     sb=self.schema_b,
                     tb=self.table_b,
                     rbk=self.ref_b_key,
-                    b_cols=list2str(self.b_cols_wo_pkey, prepend_to_list=', '))
+                    b_cols=list2str(self.b_cols_wo_pkey, prepend='b.', prepend_to_list=', '))
         return sql
 
     def __insert_trigger(self) -> str:
@@ -123,8 +129,8 @@ class Join:
               "CREATE TRIGGER tr_{dt}_on_insert\n" \
               "  INSTEAD OF INSERT ON {ds}.{dt}\n" \
               "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_insert();\n\n"\
-            .format(ds=self.output_schema,
-                    dt=self.output_view,
+            .format(ds=self.view_schema,
+                    dt=self.view_name,
                     sa=self.schema_a,
                     ta=self.table_a,
                     rak=self.ref_a_key,
@@ -152,12 +158,12 @@ class Join:
               "CREATE TRIGGER tr_{dt}_on_update\n" \
               "  INSTEAD OF UPDATE ON {ds}.{dt}\n" \
               "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_update();\n\n" \
-            .format(ds=self.output_schema,
-                    dt=self.output_view,
+            .format(ds=self.view_schema,
+                    dt=self.view_name,
                     sa=self.schema_a,
                     ta=self.table_a,
                     apk=self.a_pkey,
-                    a_up_cols=update_columns(self.a_cols),
+                    a_up_cols=update_columns(self.a_cols_wo_pkey),
                     sb=self.schema_b,
                     tb=self.table_b,
                     bpk=self.b_pkey,
@@ -178,8 +184,8 @@ class Join:
               "CREATE TRIGGER tr_{dt}_on_delete\n" \
               "  INSTEAD OF DELETE ON {ds}.{dt}\n" \
               "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_delete();\n\n" \
-            .format(ds=self.output_schema,
-                    dt=self.output_view,
+            .format(ds=self.view_schema,
+                    dt=self.view_name,
                     sa=self.schema_a,
                     ta=self.table_a,
                     apk=self.a_pkey,

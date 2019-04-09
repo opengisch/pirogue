@@ -17,7 +17,7 @@ $BODY$
 LANGUAGE plpgsql;
 
 CREATE TABLE pirogue_test.animal (
-	id text PRIMARY KEY default pirogue_test.generate_id('animal'),
+	aid text PRIMARY KEY default pirogue_test.generate_id('animal'),
 	name text,
 	year smallint);
 
@@ -33,6 +33,11 @@ CREATE TABLE pirogue_test.dog (
 	did text REFERENCES pirogue_test.animal,
 	fk_breed integer REFERENCES pirogue_test.dog_breed,
 	eye_color text);
+
+-- ref col has same name as parent pkey column
+CREATE TABLE pirogue_test.aardvark (
+   	aid text REFERENCES pirogue_test.animal,
+	father text);
 
 
 INSERT INTO pirogue_test.cat_breed (id, name) VALUES (1, 'Abyssinian');

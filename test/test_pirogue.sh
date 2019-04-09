@@ -9,6 +9,7 @@ export PYTHONPATH=${DIR}/..:${PYTHONPATH}
 export PGSERVICE=pirogue_test
 
 ${DIR}/../scripts/pirogue join pirogue_test.cat pirogue_test.animal
+${DIR}/../scripts/pirogue join pirogue_test.aardvark pirogue_test.animal --view-name vw_aardvark
 ERROR=0
 
 PSQL_ARGS="--tuples-only --no-align --field-separator @"
@@ -35,6 +36,16 @@ echo "test insert without pkey value (getting default from parent table)"
 psql --quiet -v ON_ERROR_STOP="on" -c "INSERT into pirogue_test.vw_cat_animal (fk_breed, eye_color, name, year) VALUES ('1', 'yellow', 'ninja', 1934);"
 RESULT=$(psql ${PSQL_ARGS} -c "SELECT cid FROM pirogue_test.vw_cat_animal")
 EXPECTED=animal_101
+if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
+
+echo "test on table with same pkey/ref name"
+psql --quiet -v ON_ERROR_STOP="on" -c "INSERT into pirogue_test.vw_aardvark (father) VALUES ('Dark Vador');"
+RESULT=$(psql ${PSQL_ARGS} -c "SELECT father FROM pirogue_test.vw_aardvark")
+EXPECTED="Dark Vador"
+if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
+psql --quiet -v ON_ERROR_STOP="on" -c "UPDATE pirogue_test.vw_aardvark SET father = 'Luke' WHERE father = 'Dark Vador';"
+RESULT=$(psql ${PSQL_ARGS} -c "SELECT father FROM pirogue_test.vw_aardvark")
+EXPECTED=Luke
 if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
 
 
