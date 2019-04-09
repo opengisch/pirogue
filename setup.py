@@ -1,7 +1,7 @@
 from setuptools import setup
 import sys
 if sys.version_info < (3,3):
-    sys.exit('Pirogie requires at least Python version 3.3.\nYou are currently running this installation with\n\n{}'.format(sys.version))
+    sys.exit('Pirogue requires at least Python version 3.3.\nYou are currently running this installation with\n\n{}'.format(sys.version))
 
 setup(
     name = 'pum',
@@ -14,7 +14,7 @@ setup(
     version = '[VERSION]',
     description = 'PostgreSQL view generator',
     author = 'Denis Rouzaud',
-    author_email = 'denis@opengis.ch',
+    author_email = 'denis.rouzaud@gmail.com',
     url = 'https://github.com/opengisch/pirogue',
     download_url = 'https://github.com/opengisch/pirogue/archive/[VERSION].tar.gz', # I'll explain this in a second
     keywords = [
