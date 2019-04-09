@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import psycopg2
 import psycopg2.extras
 
@@ -21,7 +22,8 @@ class Join:
     Creates a simple join view with associated triggers to edit.
     """
 
-    def __init__(self, pg_service: str, table_a: str, table_b: str,
+    def __init__(self, table_a: str, table_b: str,
+                 pg_service: str=None,
                  view_schema: str=None,
                  view_name: str=None,
                  join_type: JoinType=JoinType.LEFT):
@@ -49,6 +51,9 @@ class Join:
             self.view_schema = view_schema
 
         self.view_name = view_name or "vw_{ta}_{tb}".format(ta=self.table_a, tb=self.table_b)
+
+        if pg_service is None:
+            pg_service = os.getenv('PGSERVICE')
 
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cur = self.conn.cursor()

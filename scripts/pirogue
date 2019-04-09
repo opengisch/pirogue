@@ -48,7 +48,8 @@ if __name__ == "__main__":
 
     if args.command == 'join':
         join_type = JoinType(args.join_type.upper()) if args.join_type else JoinType.LEFT
-        success = Join(pg_service, args.table_a, args.table_b,
+        success = Join(args.table_a, args.table_b,
+                       pg_service=pg_service,
                        view_schema=args.view_schema,
                        view_name=args.view_name,
                        join_type=join_type).create()
