@@ -160,12 +160,12 @@ class Join:
                     sa=self.schema_a,
                     ta=self.table_a,
                     apk=self.a_pkey,
-                    a_up_cols=update_columns(self.a_cols_wo_pkey),
+                    a_up_cols=update_columns(self.a_cols_wo_pkey, sep='\n    , '),
                     sb=self.schema_b,
                     tb=self.table_b,
                     bpk=self.b_pkey,
                     rak=self.ref_a_key,
-                    b_up_cols=update_columns(self.b_cols_wo_pkey))
+                    b_up_cols=update_columns(self.b_cols_wo_pkey, sep='\n    , '))
         return sql
 
     def __delete_trigger(self):

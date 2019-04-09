@@ -28,5 +28,5 @@ def list2str(elements: list, sep: str= ', ', prepend: str='', append: str='', pr
     return prepend_to_list + sep.join([prepend+x+append for x in elements])
 
 
-def update_columns(columns: list) -> str:
-    return ", ".join(["{c} = NEW.{c}".format(c=col) for col in columns])
+def update_columns(columns: list, sep:str=', ') -> str:
+    return sep.join(["{c} = NEW.{c}".format(c=col) for col in columns])
