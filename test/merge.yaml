@@ -1,0 +1,11 @@
+
+
+
+table: pirogue_test.animal
+
+joins:
+  cat:
+    table: pirogue_test.cat
+
+  dog:
+    table: pirogue_test.dog

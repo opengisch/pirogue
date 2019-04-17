@@ -22,7 +22,7 @@ class Join:
     Creates a simple join view with associated triggers to edit.
     """
 
-    def __init__(self, table_a: str, table_b: str,
+    def __init__(self, master_table: str, joined_table: str,
                  pg_service: str=None,
                  view_schema: str=None,
                  view_name: str=None,
@@ -30,45 +30,45 @@ class Join:
         """
         Produces the SQL code of the join table and triggers
         :param pg_service:
-        :param table_a:
-        :param table_b:
+        :param master_table:
+        :param joined_table:
         :param view_schema: the schema where the view will written to
-        :param view_name: the name of the created view, defaults to vw_{table_a}_{table_b}
+        :param view_name: the name of the created view, defaults to vw_{master_table}_{join_table}
         :param join_type: the type of join
         """
-
-        (self.schema_a, self.table_a) = table_parts(table_a)
-        (self.schema_b, self.table_b) = table_parts(table_b)
-
-        self.join_type = join_type
-
-        if view_schema is None:
-            if self.schema_a != self.schema_b:
-                raise ValueError('Destination schema cannot be guessed if different on sources tables.')
-            else:
-                self.view_schema = self.schema_a
-        else:
-            self.view_schema = view_schema
-
-        self.view_name = view_name or "vw_{ta}_{tb}".format(ta=self.table_a, tb=self.table_b)
 
         if pg_service is None:
             pg_service = os.getenv('PGSERVICE')
 
+        (self.master_schema, self.master_table) = table_parts(master_table)
+        (self.joined_schema, self.joined_table) = table_parts(joined_table)
+
+        self.joined_type = join_type
+
+        if view_schema is None:
+            if self.master_schema != self.joined_schema:
+                raise ValueError('Destination schema cannot be guessed if different on sources tables.')
+            else:
+                self.view_schema = self.master_schema
+        else:
+            self.view_schema = view_schema
+
+        self.view_name = view_name or "vw_{ta}_{tb}".format(ta=self.master_table, tb=self.joined_table)
+
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cur = self.conn.cursor()
 
-        self.a_cols = columns(self.cur, self.schema_a, self.table_a)
-        self.b_cols = columns(self.cur, self.schema_b, self.table_b)
-        (self.ref_a_key, self.ref_b_key) = reference_columns(self.cur, self.schema_a, self.table_a, self.schema_b, self.table_b)
+        self.master_cols = columns(self.cur, self.master_schema, self.master_table)
+        self.joined_cols = columns(self.cur, self.joined_schema, self.joined_table)
+        (self.ref_master_key, self.ref_joined_key) = reference_columns(self.cur, self.master_schema, self.master_table, self.joined_schema, self.joined_table)
         try:
-            self.a_pkey = primary_key(self.cur, self.schema_a, self.table_a)
+            self.master_pkey = primary_key(self.cur, self.master_schema, self.master_table)
         except TableHasNoPrimaryKey:
-            self.a_pkey = self.ref_a_key
-        self.b_pkey = primary_key(self.cur, self.schema_b, self.table_b)
-        self.b_cols_wo_pkey = columns(self.cur, self.schema_b, self.table_b, True)
-        self.a_cols_wo_pkey = list(self.a_cols)  # make a copy, otherwise keeps reference
-        self.a_cols_wo_pkey.remove(self.a_pkey)
+            self.master_pkey = self.ref_master_key
+        self.joined_pkey = primary_key(self.cur, self.joined_schema, self.joined_table)
+        self.joined_cols_wo_pkey = columns(self.cur, self.joined_schema, self.joined_table, True)
+        self.master_cols_wo_pkey = list(self.master_cols)  # make a copy, otherwise keeps reference
+        self.master_cols_wo_pkey.remove(self.master_pkey)
 
     def create(self) -> bool:
         """
@@ -93,20 +93,20 @@ class Join:
         Create the SQL code for the view
         :return: the SQL code
         """
-        sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS SELECT\n  {a_cols}{b_cols}\n" \
-              "  FROM {sa}.{ta} AS a\n" \
-              "  {jt} JOIN {sb}.{tb} AS b ON b.{rbk} = a.{rak};\n\n"\
+        sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS SELECT\n  {master_cols}{joined_cols}\n" \
+              "  FROM {sm}.{tm} AS m\n" \
+              "  {jt} JOIN {sj}.{tj} AS j ON j.{rjk} = m.{rmk};\n\n"\
             .format(ds=self.view_schema,
                     dt=self.view_name,
-                    jt=self.join_type.value,
-                    sa=self.schema_a,
-                    ta=self.table_a,
-                    rak=self.ref_a_key,
-                    a_cols=list2str(self.a_cols, prepend='a.'),
-                    sb=self.schema_b,
-                    tb=self.table_b,
-                    rbk=self.ref_b_key,
-                    b_cols=list2str(self.b_cols_wo_pkey, prepend='b.', prepend_to_list=', '))
+                    jt=self.joined_type.value,
+                    sm=self.master_schema,
+                    tm=self.master_table,
+                    rmk=self.ref_master_key,
+                    master_cols=list2str(self.master_cols, prepend='m.'),
+                    sj=self.joined_schema,
+                    tj=self.joined_table,
+                    rjk=self.ref_joined_key,
+                    joined_cols=list2str(self.joined_cols_wo_pkey, prepend='j.', prepend_to_list=', '))
         return sql
 
     def __insert_trigger(self) -> str:
@@ -133,17 +133,17 @@ class Join:
               "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_insert();\n\n"\
             .format(ds=self.view_schema,
                     dt=self.view_name,
-                    sa=self.schema_a,
-                    ta=self.table_a,
-                    rak=self.ref_a_key,
-                    a_cols=list2str(self.a_cols, prepend='\n    '),
-                    a_new_cols=list2str(self.a_cols, prepend='\n    NEW.', append=''),
-                    sb=self.schema_b,
-                    tb=self.table_b,
-                    b_cols=list2str(self.b_cols, prepend='\n    '),
-                    bpk=self.b_pkey,
-                    bkp_def=default_value(self.cur, self.schema_b, self.table_b, self.b_pkey),
-                    b_new_cols=list2str(self.b_cols_wo_pkey, prepend='\n    NEW.', append=''))
+                    sa=self.master_schema,
+                    ta=self.master_table,
+                    rak=self.ref_master_key,
+                    a_cols=list2str(self.master_cols, prepend='\n    '),
+                    a_new_cols=list2str(self.master_cols, prepend='\n    NEW.', append=''),
+                    sb=self.joined_schema,
+                    tb=self.joined_table,
+                    b_cols=list2str(self.joined_cols, prepend='\n    '),
+                    bpk=self.joined_pkey,
+                    bkp_def=default_value(self.cur, self.joined_schema, self.joined_table, self.joined_pkey),
+                    b_new_cols=list2str(self.joined_cols_wo_pkey, prepend='\n    NEW.', append=''))
         return sql
 
     def __update_trigger(self):
@@ -162,15 +162,15 @@ class Join:
               "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_update();\n\n" \
             .format(ds=self.view_schema,
                     dt=self.view_name,
-                    sa=self.schema_a,
-                    ta=self.table_a,
-                    apk=self.a_pkey,
-                    a_up_cols=update_columns(self.a_cols_wo_pkey, sep='\n    , '),
-                    sb=self.schema_b,
-                    tb=self.table_b,
-                    bpk=self.b_pkey,
-                    rak=self.ref_a_key,
-                    b_up_cols=update_columns(self.b_cols_wo_pkey, sep='\n    , '))
+                    sa=self.master_schema,
+                    ta=self.master_table,
+                    apk=self.master_pkey,
+                    a_up_cols=update_columns(self.master_cols_wo_pkey, sep='\n    , '),
+                    sb=self.joined_schema,
+                    tb=self.joined_table,
+                    bpk=self.joined_pkey,
+                    rak=self.ref_master_key,
+                    b_up_cols=update_columns(self.joined_cols_wo_pkey, sep='\n    , '))
         return sql
 
     def __delete_trigger(self):
@@ -188,11 +188,11 @@ class Join:
               "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_delete();\n\n" \
             .format(ds=self.view_schema,
                     dt=self.view_name,
-                    sa=self.schema_a,
-                    ta=self.table_a,
-                    apk=self.a_pkey,
-                    sb=self.schema_b,
-                    tb=self.table_b,
-                    bpk=self.b_pkey,
-                    rak=self.ref_a_key)
+                    sa=self.master_schema,
+                    ta=self.master_table,
+                    apk=self.master_pkey,
+                    sb=self.joined_schema,
+                    tb=self.joined_table,
+                    bpk=self.joined_pkey,
+                    rak=self.ref_master_key)
         return sql

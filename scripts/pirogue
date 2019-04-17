@@ -2,8 +2,10 @@
 
 import argparse
 import os
+import yaml
 
 from pirogue.join import Join, JoinType
+from pirogue.merge import Merge
 
 
 if __name__ == "__main__":
@@ -21,11 +23,18 @@ if __name__ == "__main__":
 
     # simple join view
     join_parser = subparsers.add_parser('join', help='create a simple join view')
-    join_parser.add_argument('table_a')
-    join_parser.add_argument('table_b')
+    join_parser.add_argument('master_table')
+    join_parser.add_argument('join_table')
     join_parser.add_argument('-s', '--view-schema', help='schema for the created join view')
     join_parser.add_argument('-v', '--view-name', help='name for the created join view')
     join_parser.add_argument('-t', '--join-type', help='the type of join: LEFT (default), RIGHT, FULL or INNER.')
+    # TODO specific column def
+    # join_parser.add_argument('-c', '--column-definition', nargs=2, action='append',
+    # help='adds a columns with a specific definition (column_name definition)')
+
+    # merge view
+    merger_parser = subparsers.add_parser('merge', help='create a merge view')
+    merger_parser.add_argument('definition_file', help='YAML definition of the merge view', type=argparse.FileType('r'))
 
     args = parser.parse_args()
 
@@ -48,12 +57,16 @@ if __name__ == "__main__":
 
     if args.command == 'join':
         join_type = JoinType(args.join_type.upper()) if args.join_type else JoinType.LEFT
-        success = Join(args.table_a, args.table_b,
+        success = Join(args.master_table, args.join_table,
                        pg_service=pg_service,
                        view_schema=args.view_schema,
                        view_name=args.view_name,
                        join_type=join_type).create()
         if not success:
             exit_val = 1
+
+    elif args.command == 'merge':
+        yaml_definition = yaml.safe_load(args.definition_file)
+        Merge(yaml_definition)
 
     exit(exit_val)
