@@ -10,6 +10,7 @@ export PGSERVICE=pirogue_test
 
 ${DIR}/../scripts/pirogue join pirogue_test.cat pirogue_test.animal
 ${DIR}/../scripts/pirogue join pirogue_test.aardvark pirogue_test.animal --view-name vw_aardvark
+${DIR}/../scripts/pirogue join pirogue_test.eagle pirogue_test.animal
 ERROR=0
 
 PSQL_ARGS="--tuples-only --no-align --field-separator @"
@@ -48,6 +49,15 @@ RESULT=$(psql ${PSQL_ARGS} -c "SELECT father FROM pirogue_test.vw_aardvark")
 EXPECTED=Luke
 if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
 
+echo "test on table with serial key"
+psql --quiet -v ON_ERROR_STOP="on" -c "INSERT into pirogue_test.vw_eagle_animal (weight) VALUES (1.2);"
+RESULT=$(psql ${PSQL_ARGS} -c "SELECT weight FROM pirogue_test.vw_eagle_animal")
+EXPECTED="1.2"
+if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
+psql --quiet -v ON_ERROR_STOP="on" -c "UPDATE pirogue_test.vw_eagle_animal SET weight = 0 WHERE weight = 1.2;"
+RESULT=$(psql ${PSQL_ARGS} -c "SELECT weight FROM pirogue_test.vw_eagle_animal")
+EXPECTED=0
+if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
 
 
 echo $ERROR

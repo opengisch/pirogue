@@ -54,7 +54,7 @@ class Merge:
 
             print(table_def)
 
-            TODO: test with serial id for joins and here after
+            #TODO: test with serial id for joins and here after
 
     def create(self) -> bool:
         """

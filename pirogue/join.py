@@ -118,12 +118,13 @@ class Join:
               "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_insert() RETURNS trigger AS\n" \
               "$BODY$\n" \
               "BEGIN\n" \
-              "INSERT INTO {sb}.{tb} ( {b_cols} )\n" \
+              "INSERT INTO {sj}.{tj} ( {joined_cols} )\n" \
               "  VALUES (\n" \
-              "    COALESCE( NEW.{rak}, {bkp_def} ), {b_new_cols} )\n" \
-              "  RETURNING {bpk} INTO NEW.{rak};\n" \
-              "INSERT INTO {sa}.{ta} ( {a_cols} )\n" \
-              "  VALUES ( {a_new_cols} );\n" \
+              "    COALESCE( NEW.{rmk}, {jkp_def} ), {joined_new_cols} )\n" \
+              "  RETURNING {jpk} INTO NEW.{rmk};\n" \
+              "INSERT INTO {sm}.{tm} ( {master_cols} )\n" \
+              "  VALUES (\n" \
+              "    COALESCE( NEW.{mpk}, {mkp_def} ),  {master_new_cols} );\n" \
               "RETURN NEW;\n" \
               "END;\n" \
               "$BODY$\n" \
@@ -133,17 +134,19 @@ class Join:
               "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_insert();\n\n"\
             .format(ds=self.view_schema,
                     dt=self.view_name,
-                    sa=self.master_schema,
-                    ta=self.master_table,
-                    rak=self.ref_master_key,
-                    a_cols=list2str(self.master_cols, prepend='\n    '),
-                    a_new_cols=list2str(self.master_cols, prepend='\n    NEW.', append=''),
-                    sb=self.joined_schema,
-                    tb=self.joined_table,
-                    b_cols=list2str(self.joined_cols, prepend='\n    '),
-                    bpk=self.joined_pkey,
-                    bkp_def=default_value(self.cur, self.joined_schema, self.joined_table, self.joined_pkey),
-                    b_new_cols=list2str(self.joined_cols_wo_pkey, prepend='\n    NEW.', append=''))
+                    sm=self.master_schema,
+                    tm=self.master_table,
+                    rmk=self.ref_master_key,
+                    mpk=self.master_pkey,
+                    master_cols=list2str(self.master_cols, prepend='\n    '),
+                    mkp_def=default_value(self.cur, self.master_schema, self.master_table, self.master_pkey),
+                    master_new_cols=list2str(self.master_cols_wo_pkey, prepend='\n    NEW.', append=''),
+                    sj=self.joined_schema,
+                    tj=self.joined_table,
+                    joined_cols=list2str(self.joined_cols, prepend='\n    '),
+                    jpk=self.joined_pkey,
+                    jkp_def=default_value(self.cur, self.joined_schema, self.joined_table, self.joined_pkey),
+                    joined_new_cols=list2str(self.joined_cols_wo_pkey, prepend='\n    NEW.', append=''))
         return sql
 
     def __update_trigger(self):
@@ -151,8 +154,8 @@ class Join:
               "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_update() RETURNS trigger AS\n " \
               "$BODY$\n" \
               "BEGIN\n" \
-              "  UPDATE {sa}.{ta}\n    SET {a_up_cols}\n    WHERE {apk} = OLD.{apk};\n" \
-              "  UPDATE {sb}.{tb}\n    SET {b_up_cols}\n    WHERE {bpk} = OLD.{rak};\n" \
+              "  UPDATE {sa}.{ta}\n    SET {master_up_cols}\n    WHERE {apk} = OLD.{apk};\n" \
+              "  UPDATE {sb}.{tb}\n    SET {joined_up_cols}\n    WHERE {bpk} = OLD.{rak};\n" \
               "RETURN NEW;\n" \
               "END;\n" \
               "$BODY$\n" \
@@ -165,12 +168,12 @@ class Join:
                     sa=self.master_schema,
                     ta=self.master_table,
                     apk=self.master_pkey,
-                    a_up_cols=update_columns(self.master_cols_wo_pkey, sep='\n    , '),
+                    master_up_cols=update_columns(self.master_cols_wo_pkey, sep='\n    , '),
                     sb=self.joined_schema,
                     tb=self.joined_table,
                     bpk=self.joined_pkey,
                     rak=self.ref_master_key,
-                    b_up_cols=update_columns(self.joined_cols_wo_pkey, sep='\n    , '))
+                    joined_up_cols=update_columns(self.joined_cols_wo_pkey, sep='\n    , '))
         return sql
 
     def __delete_trigger(self):

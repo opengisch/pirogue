@@ -39,6 +39,12 @@ CREATE TABLE pirogue_test.aardvark (
    	aid text REFERENCES pirogue_test.animal,
 	father text);
 
+-- ref col is a serial key
+CREATE TABLE pirogue_test.eagle (
+   	eid serial PRIMARY KEY,
+   	fk_animal text REFERENCES pirogue_test.animal,
+	weight double precision);
+
 
 
 
