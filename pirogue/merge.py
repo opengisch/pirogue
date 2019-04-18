@@ -5,8 +5,12 @@ import psycopg2
 import psycopg2.extras
 
 from pirogue.utils import table_parts, list2str, update_columns
-from pirogue.information_schema import TableHasNoPrimaryKey, columns, reference_columns, primary_key, default_value
+from pirogue.information_schema import TableHasNoPrimaryKey, NoReferenceFound, \
+    columns, reference_columns, primary_key, default_value
 
+
+class ReferencedTableDefinedBeforeReferencing(Exception):
+    pass
 
 
 class Merge:
@@ -14,67 +18,202 @@ class Merge:
     Creates a simple join view with associated triggers to edit.
     """
 
-    def __init__(self, yaml_definition: dict, pg_service: str=None):
+    def __init__(self, definition: dict, pg_service: str = None, variables: dict = {}):
         """
         Produces the SQL code of the join table and triggers
-        :param yaml_definition: the YAML definition of the merge view
+        :param definition: the YAML definition of the merge view
         :param pg_service:
+        :param variables: dictionary for variables to be used in SQL deltas ( name => value )
         """
         if pg_service is None:
             pg_service = os.getenv('PGSERVICE')
 
-        print('global def:', yaml_definition)
-        print('***')
+        self.variables = variables
 
-        (self.master_schema, self.master_table) = table_parts(yaml_definition['table'])
+        (self.master_schema, self.master_table) = table_parts(definition['table'])
 
-        self.view_schema = yaml_definition.get('view_schema', self.master_schema)
-        self.view_name = yaml_definition.get('view_name', "vw_merge_{t}".format(t=self.master_table))
+        # global options:
+        self.fkey_is_pkey = definition.get('fkey_is_pkey', False)
+
+        self.view_schema = definition.get('view_schema', self.master_schema)
+        self.view_name = definition.get('view_name', "vw_merge_{t}".format(t=self.master_table))
+        self.view_alias = definition.get('alias', self.master_table)
+        # self.short_alias = definition.get('short_alias', self.master_table)
 
         self.conn = psycopg2.connect("service={0}".format(pg_service))
-        self.cur = self.conn.cursor()
+        self.cursor = self.conn.cursor()
 
-        self.master_cols = columns(self.cur, self.master_schema, self.master_table)
+        self.master_cols = definition.get('columns', None) or columns(self.cursor, self.master_schema, self.master_table)
+        try:
+            self.master_pkey = definition.get('key', None) or primary_key(self.cursor, self.master_schema, self.master_table)
+        except TableHasNoPrimaryKey:
+            raise TableHasNoPrimaryKey('{vn} has no primary key, specify it with "key"'.format(vn=self.view_alias))
 
-        self.master_pkey = primary_key(self.cur, self.master_schema, self.master_table)
-        self.master_cols_wo_pkey = columns(self.cur, self.master_schema, self.master_table, True)
-
-        self.joins = yaml_definition['joins']
+        self.joins = definition['joins']
+        self.joined_ref_master_key = []
         for alias, table_def in self.joins.items():
             (table_def['table_schema'], table_def['table_name']) = table_parts(table_def['table'])
-            table_def['cols'] = columns(self.cur, table_def['table_schema'], table_def['table_name'])
+            table_def['short_alias'] = table_def.get('short_alias', alias)
+            table_def['cols'] = columns(self.cursor, table_def['table_schema'], table_def['table_name'],
+                                        skip_columns=table_def.get('skip_columns', []))
+
+            if 'fkey' in table_def:
+                table_def['ref_master_key'] = table_def['fkey']
+            else:
+                try:
+                    (table_def['ref_master_key'], _) = reference_columns(self.cursor,
+                                                                         table_def['table_schema'], table_def['table_name'],
+                                                                         self.master_schema, self.master_table)
+                except NoReferenceFound as e:
+                    # no reference found (this is probably because using a SQL definition instead of a proper table
+                    # defaulting to primary key if allowed by global option
+                    if self.fkey_is_pkey:
+                        try:
+                            table_def['ref_master_key'] = primary_key(self.cursor, table_def['table_schema'], table_def['table_name'])
+                        except TableHasNoPrimaryKey:
+                            raise NoReferenceFound('{ts}.{tn} has no reference to {ms}.{mt}'.format(ts=table_def['table_schema'],
+                                                                                                    tn=table_def['table_name'],
+                                                                                                    ms=self.master_schema,
+                                                                                                    mt=self.master_table))
+                    else:
+                        raise e
             try:
-                table_def['pkey'] = primary_key(self.cur, table_def['table_schema'], table_def['table_name'])
+                table_def['pkey'] = primary_key(self.cursor, table_def['table_schema'], table_def['table_name'])
             except TableHasNoPrimaryKey:
-                (table_def['pkey'], _) = reference_columns(self.cur, table_def['table_schema'], table_def['table_name'],
-                                                        self.master_schema, self.master_table)
+                table_def['pkey'] = table_def['ref_master_key']
 
-            table_def['cols_wo_pkey'] = list(table_def['cols'])  # make a copy, otherwise keeps reference
-            table_def['cols_wo_pkey'].remove(table_def['pkey'])
+            # make a copy, otherwise keeps reference
+            table_def['cols_wo_ref_key'] = list(table_def['cols'])
+            table_def['cols_wo_ref_key'].remove(table_def['ref_master_key'])
 
-            print(table_def)
-
-            #TODO: test with serial id for joins and here after
+            # fix lower levels references (table not linked to the master table)
+            if 'referenced_by' in table_def:
+                try:
+                    table_def['reference_master_table'] = False
+                    table_def['referenced_by_alias'] = self.joins[table_def['referenced_by']]['short_alias']
+                    (table_def['referenced_by_key'], _) = reference_columns(self.cursor,
+                                                                            self.joins[table_def['referenced_by']]['table_schema'],
+                                                                            self.joins[table_def['referenced_by']]['table_name'],
+                                                                            table_def['table_schema'], table_def['table_name'])
+                except KeyError:
+                    raise ReferencedTableDefinedBeforeReferencing('"{rd}" should be defined after "{rg}"'.format(rd=alias,
+                                                                                                                 rg=table_def['referenced_by']))
+            else:
+                table_def['reference_master_table'] = True
+                table_def['referenced_by_alias'] = self.view_alias
+                table_def['referenced_by_key'] = self.master_pkey
 
     def create(self) -> bool:
         """
 
         :return:
         """
-
-        for sql in [self.__view(),
-                    self.__insert_trigger(),
-                    self.__update_trigger(),
-                    self.__delete_trigger()]:
+        for sql in [self.__view()]:
             try:
-                self.cur.execute(sql)
+                if self.variables:
+                    self.cursor.execute(sql, self.variables)
+                else:
+                    self.cursor.execute(sql)
             except psycopg2.Error as e:
                 print("*** Failing:\n{}\n***".format(sql))
                 raise e
         self.conn.commit()
         return True
 
+    def column_alias(self, table_alias: str, column: str, prepend_as: bool = False) -> str:
+        """
+
+        :param table_alias:
+        :param column:
+        :param prepend_as:
+        :return: empty string if there is no alias (i.e = field name)
+        """
+        col_alias = ""
+        remap_dict = self.joins[table_alias].get('remap_columns', {})
+        prefix = self.joins[table_alias].get('prefix', None)
+        if column in remap_dict:
+            col_alias = remap_dict[column]
+        elif prefix:
+            col_alias = prefix + column
+        if prepend_as and col_alias:
+            col_alias = ' AS {al}'.format(al=col_alias)
+        return col_alias
+
     def __view(self) -> str:
+        """
+        :return:
+        """
+
+        sql = """
+CREATE OR REPLACE VIEW {vs}.{vn} AS
+  SELECT
+    CASE
+      {type}
+      ELSE 'unknown'::text
+    END AS {alias}_type,{master_cols},{joined_cols}
+  FROM {ms}.{mt} {alias}
+    {joined_tables};
+                
+        """.format(vs=self.view_schema,
+                   vn=self.view_name,
+                   type=list2str(elements=["WHEN {al}.{mrf} IS NOT NULL THEN '{al}'::text"
+                                           .format(al=table_def['short_alias'], mrf=table_def['ref_master_key'])
+                                           for table_def in self.joins.values() if table_def['reference_master_table']],
+                                 sep='\n      '),
+                   alias=self.view_alias,
+                   master_cols=list2str(self.master_cols, prepend='\n    {al}.'.format(al=self.view_alias)),
+                   joined_cols=list2str(['{table_alias}.{column}{col_alias}'.format(table_alias=table_def['short_alias'],
+                                                                                    column=col,
+                                                                                    col_alias=self.column_alias(alias, col, prepend_as=True))
+                                         for alias, table_def in self.joins.items()
+                                         for col in table_def['cols_wo_ref_key']],
+                                        prepend='\n    '),
+                   ms=self.master_schema,
+                   mt=self.master_table,
+                   joined_tables=list2str(elements=["LEFT JOIN {tb} {al} ON {al}.{rmk} = {rba}.{mpk}"
+                                                    .format(al=table_def['short_alias'],
+                                                            tb=table_def['table'],
+                                                            rmk=table_def['ref_master_key'],
+                                                            rba=table_def['referenced_by_alias'],
+                                                            mpk=table_def['referenced_by_key']) for table_def in self.joins.values()],
+                                          sep='\n    ')
+                   )
+        return sql
+
+ #        "CREATE OR REPLACE VIEW qgep_od.vw_qgep_wastewater_structure AS
+ # SELECT ws.identifier,
+ #        CASE
+ #            WHEN ma.obj_id IS NOT NULL THEN 'manhole'::text
+ #            WHEN ss.obj_id IS NOT NULL THEN 'special_structure'::text
+ #            WHEN dp.obj_id IS NOT NULL THEN 'discharge_point'::text
+ #            WHEN ii.obj_id IS NOT NULL THEN 'infiltration_installation'::text
+ #            ELSE 'unknown'::text
+ #        END AS ws_type,
+ #    ma.function AS ma_function,
+ #    ss.function AS ss_function,
+ #
+ #   FROM ( SELECT ws_1.obj_id,
+ #            st_collect(co.situation_geometry)::geometry(MultiPointZ,2056) AS situation_geometry,
+ #                CASE
+ #                    WHEN count(wn_1.obj_id) = 1 THEN min(wn_1.obj_id::text)
+ #                    ELSE NULL::text
+ #                END AS wn_obj_id
+ #           FROM qgep_od.wastewater_structure ws_1
+ #             FULL JOIN qgep_od.structure_part sp ON sp.fk_wastewater_structure::text = ws_1.obj_id::text
+ #             LEFT JOIN qgep_od.cover co ON co.obj_id::text = sp.obj_id::text
+ #             RIGHT JOIN qgep_od.wastewater_networkelement ne ON ne.fk_wastewater_structure::text = ws_1.obj_id::text
+ #             RIGHT JOIN qgep_od.wastewater_node wn_1 ON wn_1.obj_id::text = ne.obj_id::text
+ #          GROUP BY ws_1.obj_id) aggregated_wastewater_structure
+ #     LEFT JOIN qgep_od.wastewater_structure ws ON ws.obj_id::text = aggregated_wastewater_structure.obj_id::text
+ #     LEFT JOIN qgep_od.cover main_co ON main_co.obj_id::text = ws.fk_main_cover::text
+ #     LEFT JOIN qgep_od.structure_part main_co_sp ON main_co_sp.obj_id::text = ws.fk_main_cover::text
+ #     LEFT JOIN qgep_od.manhole ma ON ma.obj_id::text = ws.obj_id::text
+ #     LEFT JOIN qgep_od.special_structure ss ON ss.obj_id::text = ws.obj_id::text
+ #     LEFT JOIN qgep_od.discharge_point dp ON dp.obj_id::text = ws.obj_id::text
+ #     LEFT JOIN qgep_od.infiltration_installation ii ON ii.obj_id::text = ws.obj_id::text
+ #     LEFT JOIN qgep_od.vw_wastewater_node wn ON wn.obj_id::text = aggregated_wastewater_structure.wn_obj_id;"
+
+    def __view2(self) -> str:
         """
         Create the SQL code for the view
         :return: the SQL code
@@ -123,12 +262,14 @@ class Merge:
                     ta=self.table_a,
                     rak=self.ref_a_key,
                     a_cols=list2str(self.a_cols, prepend='\n    '),
-                    a_new_cols=list2str(self.a_cols, prepend='\n    NEW.', append=''),
+                    a_new_cols=list2str(
+                        self.a_cols, prepend='\n    NEW.', append=''),
                     sb=self.schema_b,
                     tb=self.table_b,
                     b_cols=list2str(self.b_cols, prepend='\n    '),
                     bpk=self.b_pkey,
-                    bkp_def=default_value(self.cur, self.schema_b, self.table_b, self.b_pkey),
+                    bkp_def=default_value(
+                        self.cursor, self.schema_b, self.table_b, self.b_pkey),
                     b_new_cols=list2str(self.b_cols_wo_pkey, prepend='\n    NEW.', append=''))
         return sql
 
@@ -151,7 +292,8 @@ class Merge:
                     sa=self.schema_a,
                     ta=self.table_a,
                     apk=self.a_pkey,
-                    a_up_cols=update_columns(self.a_cols_wo_pkey, sep='\n    , '),
+                    a_up_cols=update_columns(
+                        self.a_cols_wo_pkey, sep='\n    , '),
                     sb=self.schema_b,
                     tb=self.table_b,
                     bpk=self.b_pkey,

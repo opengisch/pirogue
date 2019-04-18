@@ -35,6 +35,10 @@ if __name__ == "__main__":
     # merge view
     merger_parser = subparsers.add_parser('merge', help='create a merge view')
     merger_parser.add_argument('definition_file', help='YAML definition of the merge view', type=argparse.FileType('r'))
+    merger_parser.add_argument('-v', '--var', nargs=3,
+                               help='Assign variable for running SQL deltas. '
+                                    'Format is: (string|float|int) name value. ',
+                               action='append', default=[])
 
     args = parser.parse_args()
 
@@ -67,6 +71,14 @@ if __name__ == "__main__":
 
     elif args.command == 'merge':
         yaml_definition = yaml.safe_load(args.definition_file)
-        Merge(yaml_definition)
+        variables = {}
+        for v in args.var or ():
+            if v[0] == 'float':
+                variables[v[1]] = float(v[2])
+            elif v[0] == 'int':
+                variables[v[1]] = int(v[2])
+            else:
+                variables[v[1]] = v[2]
+        Merge(yaml_definition, variables=variables).create()
 
     exit(exit_val)

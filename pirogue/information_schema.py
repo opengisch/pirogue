@@ -6,6 +6,9 @@ from psycopg2.extensions import cursor
 class TableHasNoPrimaryKey(Exception):
     pass
 
+class NoReferenceFound(Exception):
+    pass
+
 
 def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
     """
@@ -30,13 +33,14 @@ def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
     return pkey
 
 
-def columns(pg_cur: cursor, schema: str, table: str, remove_pkey: bool=False) -> list:
+def columns(pg_cur: cursor, schema: str, table: str, remove_pkey: bool=False, skip_columns: list=[]) -> list:
     """
     Returns the columns of a table
     :param pg_cur: psycopg cursor
     :param schema: the schema
     :param table: the table
     :param remove_pkey: if True, the primary key is dropped
+    :param skip_columns: list of columns to be skipped
     :return: the list of columns
     """
     pg_cur.execute("SELECT attname"
@@ -47,7 +51,7 @@ def columns(pg_cur: cursor, schema: str, table: str, remove_pkey: bool=False) ->
                    " ORDER BY attnum ASC"\
                    .format(s=schema, t=table))
     pg_fields = pg_cur.fetchall()
-    pg_fields = [field[0] for field in pg_fields]
+    pg_fields = [field[0] for field in pg_fields if field[0] not in skip_columns]
     if remove_pkey:
         pkey = primary_key(pg_cur, schema, table)
         pg_fields.remove(pkey)
@@ -85,7 +89,11 @@ def reference_columns(pg_cur: cursor,
                                                    fts=foreign_table_schema)
     pg_cur.execute(sql)
     cols = pg_cur.fetchone()
-    assert len(cols) == 2
+    if not cols:
+        raise NoReferenceFound('{ts}.{tn} has no reference to {fts}.{ftn}'.format(tn=table_name,
+                                                                                  ts=table_schema,
+                                                                                  ftn=foreign_table_name,
+                                                                                  fts=foreign_table_schema))
     return cols
 
 
