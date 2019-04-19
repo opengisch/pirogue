@@ -43,6 +43,9 @@ class Merge:
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cursor = self.conn.cursor()
 
+        # columns are required if the definition is not a table but SELECT request.
+        # with PG 11+ we could use \gdesc to find out the columns out of the request.
+        # see https://www.depesz.com/2017/09/21/waiting-for-postgresql-11-add-gdesc-psql-command/
         self.master_cols = definition.get('columns', None) or columns(self.cursor, self.master_schema, self.master_table)
         try:
             self.master_pkey = definition.get('key', None) or primary_key(self.cursor, self.master_schema, self.master_table)
@@ -61,9 +64,9 @@ class Merge:
                 table_def['ref_master_key'] = table_def['fkey']
             else:
                 try:
-                    (table_def['ref_master_key'], _) = reference_columns(self.cursor,
-                                                                         table_def['table_schema'], table_def['table_name'],
-                                                                         self.master_schema, self.master_table)
+                    table_def['ref_master_key'] = reference_columns(self.cursor,
+                                                                    table_def['table_schema'], table_def['table_name'],
+                                                                    self.master_schema, self.master_table)[0]
                 except NoReferenceFound as e:
                     # no reference found (this is probably because using a SQL definition instead of a proper table
                     # defaulting to primary key if allowed by global option
@@ -88,20 +91,26 @@ class Merge:
 
             # fix lower levels references (table not linked to the master table)
             if 'referenced_by' in table_def:
+                table_def['reference_master_table'] = table_def.get('is_type', False)
+                table_def['referenced_by_alias'] = self.joins[table_def['referenced_by']]['short_alias']
                 try:
-                    table_def['reference_master_table'] = False
-                    table_def['referenced_by_alias'] = self.joins[table_def['referenced_by']]['short_alias']
-                    (table_def['referenced_by_key'], _) = reference_columns(self.cursor,
-                                                                            self.joins[table_def['referenced_by']]['table_schema'],
-                                                                            self.joins[table_def['referenced_by']]['table_name'],
-                                                                            table_def['table_schema'], table_def['table_name'])
+                    table_def['referenced_by_key'] = table_def.get('referenced_by_key', None) or \
+                                                     reference_columns(self.cursor,
+                                                                       self.joins[table_def['referenced_by']]['table_schema'],
+                                                                       self.joins[table_def['referenced_by']]['table_name'],
+                                                                       table_def['table_schema'], table_def['table_name'])[0]
+                except NoReferenceFound as e:
+                    if self.fkey_is_pkey:
+                        table_def['referenced_by_key'] = self.joins[table_def['referenced_by']]['pkey']
+                    else:
+                        raise e
                 except KeyError:
                     raise ReferencedTableDefinedBeforeReferencing('"{rd}" should be defined after "{rg}"'.format(rd=alias,
                                                                                                                  rg=table_def['referenced_by']))
             else:
-                table_def['reference_master_table'] = True
+                table_def['reference_master_table'] = table_def.get('is_type', True)
                 table_def['referenced_by_alias'] = self.view_alias
-                table_def['referenced_by_key'] = self.master_pkey
+                table_def['referenced_by_key'] = table_def.get('referenced_by_key', None) or self.master_pkey
 
     def create(self) -> bool:
         """
@@ -109,6 +118,7 @@ class Merge:
         :return:
         """
         for sql in [self.__view()]:
+            print(sql)
             try:
                 if self.variables:
                     self.cursor.execute(sql, self.variables)
@@ -156,9 +166,10 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                 
         """.format(vs=self.view_schema,
                    vn=self.view_name,
-                   type=list2str(elements=["WHEN {al}.{mrf} IS NOT NULL THEN '{al}'::text"
-                                           .format(al=table_def['short_alias'], mrf=table_def['ref_master_key'])
-                                           for table_def in self.joins.values() if table_def['reference_master_table']],
+                   type=list2str(elements=["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::text"
+                                           .format(shal=table_def['short_alias'], mrf=table_def['ref_master_key'],
+                                                   al=alias)
+                                           for alias, table_def in self.joins.items() if table_def['reference_master_table']],
                                  sep='\n      '),
                    alias=self.view_alias,
                    master_cols=list2str(self.master_cols, prepend='\n    {al}.'.format(al=self.view_alias)),
