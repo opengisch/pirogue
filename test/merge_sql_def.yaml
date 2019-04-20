@@ -4,7 +4,7 @@ view_schema: pirogue_test
 view_name: vw_all_animal
 alias: animal
 short_alias: an
-table: >
+sql_definition: >
   ( SELECT *
     FROM pirogue_test.animal )
 columns:

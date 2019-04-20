@@ -7,7 +7,7 @@ def table_parts(name: str) -> (str, str):
     :param name:
     :return:
     """
-    if '.' in name:
+    if name and '.' in name:
         return name.split('.', 1)
     else:
         return 'public', name

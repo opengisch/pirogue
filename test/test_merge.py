@@ -45,7 +45,7 @@ class TestMerge(unittest.TestCase):
         cols = self.cur.fetchall()
         self.assertEqual(cols[0][0], 'my_custom_type', 'Custom type is failing')
         self.assertEqual(cols[1][0], 'eye_color_renamed', 'Columns on top is failing')
-        self.assertEqual(cols[-1][0], 'fk_breed', 'Columns on top is failing')
+        self.assertEqual(cols[-1][0], 'dog_fk_breed', 'Columns on top is failing')
 
 
 

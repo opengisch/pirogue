@@ -21,6 +21,7 @@ joins:
       - fk_breed
     columns_at_end:
       - fk_breed
+    prefix: dog_
 
   aardvark:
     table: pirogue_test.aardvark

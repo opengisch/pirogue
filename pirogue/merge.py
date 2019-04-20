@@ -28,16 +28,20 @@ class Merge:
         :param pg_service:
         :param variables: dictionary for variables to be used in SQL deltas ( name => value )
         """
-        if pg_service is None:
-            pg_service = os.getenv('PGSERVICE')
 
         self.variables = variables
 
+        if pg_service is None:
+            pg_service = os.getenv('PGSERVICE')
+        self.conn = psycopg2.connect("service={0}".format(pg_service))
+        self.cursor = self.conn.cursor()
+
         # check definition validity
         for key in definition.keys():
-            if key not in ('table', 'fkey_is_pkey', 'view_schema',
+            if key not in ('table', 'sql_definition', 'fkey_is_pkey', 'view_schema',
                            'view_name', 'alias', 'short_alias',
-                           'type_name', 'columns', 'key', 'joins', 'columns_on_top'):
+                           'type_name', 'columns', 'key', 'joins',
+                           'columns_on_top', 'insert_trigger_pre', 'insert_trigger_post'):
                 raise InvalidDefinition('key {k} is not a valid'.format(k=key))
         for alias, table_def in definition['joins'].items():
             # check definition validity
@@ -48,37 +52,48 @@ class Merge:
                                'remap_columns', 'prefix', 'columns_on_top',
                                'columns_at_end'):
                     raise InvalidDefinition('in join {a} key "{k}" is not valid'.format(a=alias, k=key))
+        if 'sql_definition' not in definition and 'table' not in definition:
+            raise InvalidDefinition('Missing key: "table" or "sql_definition" should be provided.')
+        if 'sql_definition' in definition and 'table' in definition:
+            raise InvalidDefinition('Key error: "table" and "sql_definition" cannot be provided both.')
+        if 'sql_definition' in definition and 'columns' not in definition:
+            raise InvalidDefinition('If a SQL definition is given instead of a table, specifying the columns is required (TODO: with PG11+, it will solvable).')
+        for mandatory_key in ['joins']:
+            if mandatory_key not in definition:
+                raise InvalidDefinition('Missing key: "{k}" should be provided.'.format(k=mandatory_key))
 
-
-        (self.master_schema, self.master_table) = table_parts(definition['table'])
+        (self.master_schema, self.master_table) = table_parts(definition.get('table', None))
 
         # global options:
-        self.fkey_is_pkey = definition.get('fkey_is_pkey', False)
-
+        self.sql_definition = definition.get('sql_definition', None)
         self.view_schema = definition.get('view_schema', self.master_schema)
         self.view_name = definition.get('view_name', "vw_merge_{t}".format(t=self.master_table))
         self.view_alias = definition.get('alias', self.master_table)
         self.short_alias = definition.get('short_alias', self.view_alias)
         self.type_name = definition.get('type_name', '{al}_type'.format(al=self.view_alias))
+        self.fkey_is_pkey = definition.get('fkey_is_pkey', False)
+        self.insert_trigger_pre = definition.get('insert_trigger_pre', '')
+        self.insert_trigger_post = definition.get('insert_trigger_post', '')
 
-        self.conn = psycopg2.connect("service={0}".format(pg_service))
-        self.cursor = self.conn.cursor()
+        try:
+            self.master_pkey = definition.get('key', None) or primary_key(self.cursor, self.master_schema, self.master_table)
+        except TableHasNoPrimaryKey:
+            raise TableHasNoPrimaryKey('{vn} has no primary key, specify it with "key"'.format(vn=self.view_alias))
 
-        # columns are required if the definition is not a table but SELECT request.
+        # columns are required if the definition is not a table but SQL definition.
         # with PG 11+ we could use \gdesc to find out the columns out of the request.
         # see https://www.depesz.com/2017/09/21/waiting-for-postgresql-11-add-gdesc-psql-command/
         self.master_cols = definition.get('columns', None) or columns(self.cursor, self.master_schema, self.master_table)
+        self.master_cols_wo_pkey = list(self.master_cols)  # duplicate otherwise keeps reference
+        if self.master_pkey in self.master_cols_wo_pkey:
+            self.master_cols_wo_pkey.remove(self.master_pkey)
+
 
         # create a dictionnary so it can be appended to joined tables
         self.main_table_def = {self.view_alias: {'cols': self.master_cols,
                                                  'cols_wo_ref_key': self.master_cols,
                                                  'short_alias': self.short_alias,
                                                  'columns_on_top': definition.get('columns_on_top', [])}}
-
-        try:
-            self.master_pkey = definition.get('key', None) or primary_key(self.cursor, self.master_schema, self.master_table)
-        except TableHasNoPrimaryKey:
-            raise TableHasNoPrimaryKey('{vn} has no primary key, specify it with "key"'.format(vn=self.view_alias))
 
         # parse the joins definition
         self.joins = definition['joins']
@@ -147,8 +162,8 @@ class Merge:
 
         :return:
         """
-        for sql in [self.__view()]:
-            print(sql)
+        for sql in [self.__view(),
+                    self.__insert_trigger()]:
             try:
                 if self.variables:
                     self.cursor.execute(sql, self.variables)
@@ -180,6 +195,15 @@ class Merge:
             col_alias = ' AS {al}'.format(al=col_alias)
         return col_alias
 
+    @staticmethod
+    def column_priority(table_def: dict, column: str) -> int:
+        if column in table_def.get('columns_on_top', []):
+            return 0
+        elif column in table_def.get('columns_at_end', []):
+            return 2
+        else:
+            return 1
+
     def __view(self) -> str:
         """
         :return:
@@ -189,99 +213,43 @@ class Merge:
 CREATE OR REPLACE VIEW {vs}.{vn} AS
   SELECT
     CASE
-      {type}
+      {types}
       ELSE 'unknown'::text
     END AS {type_name}{columns}
-  FROM {ms}.{mt} {sa}
-    {joined_tables};
-                
-        """.format(vs=self.view_schema,
-                   vn=self.view_name,
-                   type=list2str(elements=["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::text"
-                                           .format(shal=table_def['short_alias'], mrf=table_def['ref_master_key'],
-                                                   al=alias)
-                                           for alias, table_def in self.joins.items() if table_def['reference_master_table']],
-                                 sep='\n      '),
-                   type_name=self.type_name,
-                   columns=list2str(['{table_alias}.{column}{col_alias}'.format(table_alias=table_def['short_alias'],
-                                                                                column=col,
-                                                                                col_alias=self.column_alias(table_def, col, prepend_as=True))
-                                     for (alias, table_def, col)
-                                     in sorted([
-                                        (alias, table_def, col)
-                                        for alias, table_def in {**self.main_table_def, **self.joins}.items()
-                                        for col in table_def['cols_wo_ref_key']
-                                     # sort columns by 'columns_on_top'/normal/'columns_at_end' first, then by table, then y column order
-                                     ], key=lambda x: (0 if x[2] in x[1].get('columns_on_top', []) else 2 if x[2] in x[1].get('columns_at_end', []) else 1,
-                                                       list(self.joins.keys()).index(x[0])+1 if x[0] in self.joins else 0,
-                                                       x[1]['cols'].index(x[2]))
-                                     )],
-                                    prepend='\n    ', prepend_to_list=','),
-                   ms=self.master_schema,
-                   mt=self.master_table,
-                   sa=self.short_alias,
-                   joined_tables=list2str(elements=["LEFT JOIN {tb} {al} ON {al}.{rmk} = {rba}.{mpk}"
-                                                    .format(al=table_def['short_alias'],
-                                                            tb=table_def['table'],
-                                                            rmk=table_def['ref_master_key'],
-                                                            rba={**self.main_table_def, **self.joins}[table_def['referenced_by']]['short_alias'],
-                                                            mpk=table_def['referenced_by_key']) for table_def in self.joins.values()],
-                                          sep='\n    ')
+  FROM {mt} {sa}
+    {joined_tables};        
+""".format(vs=self.view_schema,
+           vn=self.view_name,
+           types=list2str(elements=["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::text"
+                                    .format(shal=table_def['short_alias'], mrf=table_def['ref_master_key'],al=alias)
+                                    for alias, table_def in self.joins.items() if table_def['reference_master_table']],
+                          sep='\n      '),
+           type_name=self.type_name,
+           columns=list2str(['{table_alias}.{column}{col_alias}'.format(table_alias=table_def['short_alias'],
+                                                                        column=col,
+                                                                        col_alias=self.column_alias(table_def, col,
+                                                                                                    prepend_as=True))
+                             for (alias, table_def, col)
+                             in sorted([
+                                (alias, table_def, col)
+                                for alias, table_def in {**self.main_table_def, **self.joins}.items()
+                                for col in table_def['cols_wo_ref_key']
+                                # sort columns by 'columns_on_top'/normal/'columns_at_end' first, then by table, then y column order
+                                ], key=lambda x: (self.column_priority(x[1], x[2]),
+                                                  list(self.joins.keys()).index(x[0])+1 if x[0] in self.joins else 0,
+                                                  x[1]['cols'].index(x[2]))
+                             )],
+                            prepend='\n    ', prepend_to_list=','),
+           mt=self.sql_definition or '{mt}.{ms}'.format(mt=self.master_schema, ms=self.master_table),
+           sa=self.short_alias,
+           joined_tables=list2str(elements=["LEFT JOIN {tb} {al} ON {al}.{rmk} = {rba}.{mpk}"
+                                            .format(al=table_def['short_alias'],
+                                                    tb=table_def['table'],
+                                                    rmk=table_def['ref_master_key'],
+                                                    rba={**self.main_table_def, **self.joins}[table_def['referenced_by']]['short_alias'],
+                                                    mpk=table_def['referenced_by_key']) for table_def in self.joins.values()],
+                                  sep='\n    ')
                    )
-        return sql
-
- #        "CREATE OR REPLACE VIEW qgep_od.vw_qgep_wastewater_structure AS
- # SELECT ws.identifier,
- #        CASE
- #            WHEN ma.obj_id IS NOT NULL THEN 'manhole'::text
- #            WHEN ss.obj_id IS NOT NULL THEN 'special_structure'::text
- #            WHEN dp.obj_id IS NOT NULL THEN 'discharge_point'::text
- #            WHEN ii.obj_id IS NOT NULL THEN 'infiltration_installation'::text
- #            ELSE 'unknown'::text
- #        END AS ws_type,
- #    ma.function AS ma_function,
- #    ss.function AS ss_function,
- #
- #   FROM ( SELECT ws_1.obj_id,
- #            st_collect(co.situation_geometry)::geometry(MultiPointZ,2056) AS situation_geometry,
- #                CASE
- #                    WHEN count(wn_1.obj_id) = 1 THEN min(wn_1.obj_id::text)
- #                    ELSE NULL::text
- #                END AS wn_obj_id
- #           FROM qgep_od.wastewater_structure ws_1
- #             FULL JOIN qgep_od.structure_part sp ON sp.fk_wastewater_structure::text = ws_1.obj_id::text
- #             LEFT JOIN qgep_od.cover co ON co.obj_id::text = sp.obj_id::text
- #             RIGHT JOIN qgep_od.wastewater_networkelement ne ON ne.fk_wastewater_structure::text = ws_1.obj_id::text
- #             RIGHT JOIN qgep_od.wastewater_node wn_1 ON wn_1.obj_id::text = ne.obj_id::text
- #          GROUP BY ws_1.obj_id) aggregated_wastewater_structure
- #     LEFT JOIN qgep_od.wastewater_structure ws ON ws.obj_id::text = aggregated_wastewater_structure.obj_id::text
- #     LEFT JOIN qgep_od.cover main_co ON main_co.obj_id::text = ws.fk_main_cover::text
- #     LEFT JOIN qgep_od.structure_part main_co_sp ON main_co_sp.obj_id::text = ws.fk_main_cover::text
- #     LEFT JOIN qgep_od.manhole ma ON ma.obj_id::text = ws.obj_id::text
- #     LEFT JOIN qgep_od.special_structure ss ON ss.obj_id::text = ws.obj_id::text
- #     LEFT JOIN qgep_od.discharge_point dp ON dp.obj_id::text = ws.obj_id::text
- #     LEFT JOIN qgep_od.infiltration_installation ii ON ii.obj_id::text = ws.obj_id::text
- #     LEFT JOIN qgep_od.vw_wastewater_node wn ON wn.obj_id::text = aggregated_wastewater_structure.wn_obj_id;"
-
-    def __view2(self) -> str:
-        """
-        Create the SQL code for the view
-        :return: the SQL code
-        """
-        sql = "CREATE OR REPLACE VIEW {ds}.{dt} AS SELECT\n  {a_cols}{b_cols}\n" \
-              "  FROM {sa}.{ta} AS a\n" \
-              "  {jt} JOIN {sb}.{tb} AS b ON b.{rbk} = a.{rak};\n\n"\
-            .format(ds=self.view_schema,
-                    dt=self.view_name,
-                    jt=self.join_type.value,
-                    sa=self.schema_a,
-                    ta=self.table_a,
-                    rak=self.ref_a_key,
-                    a_cols=list2str(self.a_cols, prepend='a.'),
-                    sb=self.schema_b,
-                    tb=self.table_b,
-                    rbk=self.ref_b_key,
-                    b_cols=list2str(self.b_cols_wo_pkey, prepend='b.', prepend_to_list=', '))
         return sql
 
     def __insert_trigger(self) -> str:
@@ -289,39 +257,43 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
 
         :return:
         """
-        sql = "-- INSERT TRIGGER\n" \
-              "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_insert() RETURNS trigger AS\n" \
-              "$BODY$\n" \
-              "BEGIN\n" \
-              "INSERT INTO {sb}.{tb} ( {b_cols} )\n" \
-              "  VALUES (\n" \
-              "    COALESCE( NEW.{rak}, {bkp_def} ), {b_new_cols} )\n" \
-              "  RETURNING {bpk} INTO NEW.{rak};\n" \
-              "INSERT INTO {sa}.{ta} ( {a_cols} )\n" \
-              "  VALUES ( {a_new_cols} );\n" \
-              "RETURN NEW;\n" \
-              "END;\n" \
-              "$BODY$\n" \
-              "LANGUAGE plpgsql;\n\n" \
-              "CREATE TRIGGER tr_{dt}_on_insert\n" \
-              "  INSTEAD OF INSERT ON {ds}.{dt}\n" \
-              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_insert();\n\n"\
-            .format(ds=self.view_schema,
-                    dt=self.view_name,
-                    sa=self.schema_a,
-                    ta=self.table_a,
-                    rak=self.ref_a_key,
-                    a_cols=list2str(self.a_cols, prepend='\n    '),
-                    a_new_cols=list2str(
-                        self.a_cols, prepend='\n    NEW.', append=''),
-                    sb=self.schema_b,
-                    tb=self.table_b,
-                    b_cols=list2str(self.b_cols, prepend='\n    '),
-                    bpk=self.b_pkey,
-                    bkp_def=default_value(
-                        self.cursor, self.schema_b, self.table_b, self.b_pkey),
-                    b_new_cols=list2str(self.b_cols_wo_pkey, prepend='\n    NEW.', append=''))
+        sql = """-- INSERT TRIGGER
+CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_insert() RETURNS trigger AS
+$BODY$
+BEGIN
+  {insert_trigger_pre}
+  {insert_master}
+  {insert_joins}
+  
+  {insert_trigger_post}
+RETURN NEW;
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER tr_{vn}_on_insert
+INSTEAD OF INSERT ON {vs}.{vn}
+FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
+""".format(vs=self.view_schema,
+           vn=self.view_name,
+           insert_trigger_pre=self.insert_trigger_pre,
+           insert_master='' if self.sql_definition else """
+    INSERT INTO {ms}.{mt} ( {master_cols} )
+      VALUES (
+        COALESCE( NEW.{mpk}, {mkp_def} ),  {master_new_cols} );"""
+           .format(ms=self.master_schema,
+                   mt=self.master_table,
+                   mpk=self.master_pkey,
+                   master_cols=list2str(self.master_cols, prepend='\n        '),
+                   mkp_def=default_value(self.cursor, self.master_schema, self.master_table, self.master_pkey),
+                   master_new_cols=list2str(self.master_cols_wo_pkey, prepend='\n        NEW.', append='')),
+           insert_joins=list2str([], prepend='\n'),
+           insert_trigger_post=self.insert_trigger_post)
+        print(sql)
         return sql
+
+
+
 
     def __update_trigger(self):
         sql = "-- UPDATE TRIGGER\n" \
