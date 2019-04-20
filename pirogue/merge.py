@@ -53,7 +53,7 @@ class Merge:
                                'skip_columns', 'fkey', 'is_type',
                                'referenced_by', 'referenced_by_key',
                                'remap_columns', 'prefix', 'columns_on_top',
-                               'columns_at_end'):
+                               'columns_at_end', 'columns_no_insert_or_update'):
                     raise InvalidDefinition('in join {a} key "{k}" is not valid'.format(a=alias, k=key))
         if 'sql_definition' not in definition and 'table' not in definition:
             raise InvalidDefinition('Missing key: "table" or "sql_definition" should be provided.')
@@ -107,6 +107,9 @@ class Merge:
             table_def['cols'] = table_def.get('columns', None) or columns(self.cursor, table_def['table_schema'],
                                                                                table_def['table_name'],
                                                                                skip_columns=table_def.get('skip_columns', []))
+            table_def['cols_insert_update'] = [col for col in table_def['cols']
+                                               if col not in table_def.get('columns_no_insert_or_update', [])]
+
 
             if 'fkey' in table_def:
                 table_def['ref_master_key'] = table_def['fkey']
@@ -134,9 +137,8 @@ class Merge:
                 table_def['pkey'] = table_def['ref_master_key']
 
             # make a copy, otherwise keeps reference
-            table_def['cols_wo_ref_key'] = list(table_def['cols'])
-            if table_def['ref_master_key'] in table_def['cols_wo_ref_key']:
-              table_def['cols_wo_ref_key'].remove(table_def['ref_master_key'])
+            table_def['cols_wo_ref_key'] = [col for col in table_def['cols'] if col != table_def['ref_master_key']]
+            table_def['cols_insert_update_wo_ref_key'] = [col for col in table_def['cols_insert_update'] if col != table_def['ref_master_key']]
 
             # fix lower levels references (table not linked to the master table)
             if 'referenced_by' in table_def:
@@ -307,9 +309,9 @@ FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
                                 .format(js=table_def['table_schema'],
                                         jt=table_def['table_name'],
                                         jpk=table_def['pkey'],
-                                        join_cols=list2str(table_def['cols'], prepend='\n        '),
+                                        join_cols=list2str(table_def['cols_insert_update'], prepend='\n        '),
                                         jkp_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
-                                        join_new_cols=list2str(table_def['cols_wo_ref_key'], prepend='\n        NEW.', append=''))
+                                        join_new_cols=list2str(table_def['cols_insert_update_wo_ref_key'], prepend='\n        NEW.', append=''))
             for alias, table_def in self.joins.items() if not table_def.get('is_type', True)], sep='\n'),
            insert_type_joins=list2str(["""
     WHEN NEW.ws_type = 'manhole' THEN
