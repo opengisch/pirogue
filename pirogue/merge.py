@@ -38,7 +38,8 @@ class Merge:
         self.view_schema = definition.get('view_schema', self.master_schema)
         self.view_name = definition.get('view_name', "vw_merge_{t}".format(t=self.master_table))
         self.view_alias = definition.get('alias', self.master_table)
-        # self.short_alias = definition.get('short_alias', self.master_table)
+        self.short_alias = definition.get('short_alias', self.view_alias)
+        self.type_name = definition.get('type_name', '{al}_type'.format(al=self.view_alias))
 
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cursor = self.conn.cursor()
@@ -47,6 +48,13 @@ class Merge:
         # with PG 11+ we could use \gdesc to find out the columns out of the request.
         # see https://www.depesz.com/2017/09/21/waiting-for-postgresql-11-add-gdesc-psql-command/
         self.master_cols = definition.get('columns', None) or columns(self.cursor, self.master_schema, self.master_table)
+
+        # create a dictionnary so it can be appended to joined tables
+        self.main_table_def = {self.view_alias: {'cols': self.master_cols,
+                                                 'cols_wo_ref_key': self.master_cols,
+                                                 'short_alias': self.short_alias,
+                                                 'columns_on_top': definition.get('columns_on_top', [])}}
+
         try:
             self.master_pkey = definition.get('key', None) or primary_key(self.cursor, self.master_schema, self.master_table)
         except TableHasNoPrimaryKey:
@@ -57,8 +65,9 @@ class Merge:
         for alias, table_def in self.joins.items():
             (table_def['table_schema'], table_def['table_name']) = table_parts(table_def['table'])
             table_def['short_alias'] = table_def.get('short_alias', alias)
-            table_def['cols'] = columns(self.cursor, table_def['table_schema'], table_def['table_name'],
-                                        skip_columns=table_def.get('skip_columns', []))
+            table_def['cols'] = table_def.get('only_columns', None) or columns(self.cursor, table_def['table_schema'],
+                                                                               table_def['table_name'],
+                                                                               skip_columns=table_def.get('skip_columns', []))
 
             if 'fkey' in table_def:
                 table_def['ref_master_key'] = table_def['fkey']
@@ -87,7 +96,8 @@ class Merge:
 
             # make a copy, otherwise keeps reference
             table_def['cols_wo_ref_key'] = list(table_def['cols'])
-            table_def['cols_wo_ref_key'].remove(table_def['ref_master_key'])
+            if table_def['ref_master_key'] in table_def['cols_wo_ref_key']:
+              table_def['cols_wo_ref_key'].remove(table_def['ref_master_key'])
 
             # fix lower levels references (table not linked to the master table)
             if 'referenced_by' in table_def:
@@ -112,6 +122,24 @@ class Merge:
                 table_def['referenced_by_alias'] = self.view_alias
                 table_def['referenced_by_key'] = table_def.get('referenced_by_key', None) or self.master_pkey
 
+
+        # print(list2str([ alias+' '+col   for alias, table_def in self.joins.items()
+        #                      for col in table_def['cols_wo_ref_key']], prepend='\n'))
+        # raise Exception
+        # print(list2str( [alias+' '+col
+        #                  for (alias, col)
+        #                  in sorted(
+        #                     [ (alias,col) for alias, table_def in self.joins.items()
+        #                                   for col in table_def['cols_wo_ref_key']
+        #                     ]
+        #                     , key=lambda x: (0 if x[1] in self.joins[x[0]].get('columns_on_top', []) else 1,
+        #                                      list(self.joins.keys()).index(x[0]),
+        #                                      list(self.joins[x[0]]['cols']).index(x[1]))
+        #                     )],
+        #                     prepend='\n'))
+        # raise Exception
+
+
     def create(self) -> bool:
         """
 
@@ -130,7 +158,7 @@ class Merge:
         self.conn.commit()
         return True
 
-    def column_alias(self, table_alias: str, column: str, prepend_as: bool = False) -> str:
+    def column_alias(self, table_def: dict, column: str, prepend_as: bool = False) -> str:
         """
 
         :param table_alias:
@@ -139,8 +167,8 @@ class Merge:
         :return: empty string if there is no alias (i.e = field name)
         """
         col_alias = ""
-        remap_dict = self.joins[table_alias].get('remap_columns', {})
-        prefix = self.joins[table_alias].get('prefix', None)
+        remap_dict = table_def.get('remap_columns', {})
+        prefix = table_def.get('prefix', None)
         if column in remap_dict:
             col_alias = remap_dict[column]
         elif prefix:
@@ -160,7 +188,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
     CASE
       {type}
       ELSE 'unknown'::text
-    END AS {alias}_type,{master_cols},{joined_cols}
+    END AS {type_name}{columns}
   FROM {ms}.{mt} {alias}
     {joined_tables};
                 
@@ -171,16 +199,24 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                    al=alias)
                                            for alias, table_def in self.joins.items() if table_def['reference_master_table']],
                                  sep='\n      '),
-                   alias=self.view_alias,
-                   master_cols=list2str(self.master_cols, prepend='\n    {al}.'.format(al=self.view_alias)),
-                   joined_cols=list2str(['{table_alias}.{column}{col_alias}'.format(table_alias=table_def['short_alias'],
+                   type_name=self.type_name,
+                   #master_cols=list2str(self.master_cols, prepend='\n    {al}.'.format(al=self.view_alias), prepend_to_list=','),
+                   columns=list2str(['{table_alias}.{column}{col_alias}'.format(table_alias=table_def['short_alias'],
                                                                                     column=col,
-                                                                                    col_alias=self.column_alias(alias, col, prepend_as=True))
-                                         for alias, table_def in self.joins.items()
-                                         for col in table_def['cols_wo_ref_key']],
-                                        prepend='\n    '),
+                                                                                    col_alias=self.column_alias(table_def, col, prepend_as=True))
+                                         for (alias, table_def, col)
+                                         in sorted(
+                           [(alias, table_def, col) for alias, table_def in {**self.main_table_def, **self.joins}.items()
+                            for col in table_def['cols_wo_ref_key']
+                            ]
+                           , key=lambda x: (0 if x[2] in x[1].get('columns_on_top', []) else 1,
+                                            list(self.joins.keys()).index(x[0])+1 if x[0] in self.joins else 0,
+                                            x[1]['cols'].index(x[2]))
+                       )],
+                                        prepend='\n    ', prepend_to_list=','),
                    ms=self.master_schema,
                    mt=self.master_table,
+                   alias=self.view_alias,
                    joined_tables=list2str(elements=["LEFT JOIN {tb} {al} ON {al}.{rmk} = {rba}.{mpk}"
                                                     .format(al=table_def['short_alias'],
                                                             tb=table_def['table'],
@@ -303,8 +339,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                     sa=self.schema_a,
                     ta=self.table_a,
                     apk=self.a_pkey,
-                    a_up_cols=update_columns(
-                        self.a_cols_wo_pkey, sep='\n    , '),
+                    a_up_cols=update_columns(self.a_cols_wo_pkey, sep='\n    , '),
                     sb=self.schema_b,
                     tb=self.table_b,
                     bpk=self.b_pkey,
