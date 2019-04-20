@@ -12,6 +12,9 @@ from pirogue.information_schema import TableHasNoPrimaryKey, NoReferenceFound, \
 class ReferencedTableDefinedBeforeReferencing(Exception):
     pass
 
+class InvalidDefinition(Exception):
+    pass
+
 
 class Merge:
     """
@@ -29,6 +32,22 @@ class Merge:
             pg_service = os.getenv('PGSERVICE')
 
         self.variables = variables
+
+        # check definition validity
+        for key in definition.keys():
+            if key not in ('table', 'fkey_is_pkey', 'view_schema',
+                           'view_name', 'alias', 'short_alias',
+                           'type_name', 'columns', 'key', 'joins', 'columns_on_top'):
+                raise InvalidDefinition('key {k} is not a valid'.format(k=key))
+        for alias, table_def in definition['joins'].items():
+            # check definition validity
+            for key in table_def.keys():
+                if key not in ('table', 'short_alias', 'columns',
+                               'skip_columns', 'fkey', 'is_type',
+                               'referenced_by', 'referenced_by_key',
+                               'remap_columns', 'prefix', 'columns_on_top'):
+                    raise InvalidDefinition('in join {a} key "{k}" is not valid'.format(a=alias, k=key))
+
 
         (self.master_schema, self.master_table) = table_parts(definition['table'])
 
@@ -60,12 +79,13 @@ class Merge:
         except TableHasNoPrimaryKey:
             raise TableHasNoPrimaryKey('{vn} has no primary key, specify it with "key"'.format(vn=self.view_alias))
 
+        # parse the joins definition
         self.joins = definition['joins']
         self.joined_ref_master_key = []
         for alias, table_def in self.joins.items():
             (table_def['table_schema'], table_def['table_name']) = table_parts(table_def['table'])
             table_def['short_alias'] = table_def.get('short_alias', alias)
-            table_def['cols'] = table_def.get('only_columns', None) or columns(self.cursor, table_def['table_schema'],
+            table_def['cols'] = table_def.get('columns', None) or columns(self.cursor, table_def['table_schema'],
                                                                                table_def['table_name'],
                                                                                skip_columns=table_def.get('skip_columns', []))
 
@@ -138,6 +158,7 @@ class Merge:
                 print("*** Failing:\n{}\n***".format(sql))
                 raise e
         self.conn.commit()
+        self.conn.close()
         return True
 
     def column_alias(self, table_def: dict, column: str, prepend_as: bool = False) -> str:
@@ -190,6 +211,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                         (alias, table_def, col)
                                         for alias, table_def in {**self.main_table_def, **self.joins}.items()
                                         for col in table_def['cols_wo_ref_key']
+                                     # sort columns by 'columns_on_top' first, then by table, then y column order
                                      ], key=lambda x: (0 if x[2] in x[1].get('columns_on_top', []) else 1,
                                                        list(self.joins.keys()).index(x[0])+1 if x[0] in self.joins else 0,
                                                        x[1]['cols'].index(x[2]))

@@ -1,7 +1,14 @@
 from setuptools import setup
 import sys
-if sys.version_info < (3,3):
-    sys.exit('Pirogue requires at least Python version 3.3.\nYou are currently running this installation with\n\n{}'.format(sys.version))
+
+python_min_version = (3, 6)
+
+if sys.version_info < python_min_version:
+    sys.exit('Pirogue requires at least Python version {vmaj}.{vmin}.\n'
+             'You are currently running this installation with\n\n{curver}'.format(
+        vmaj=python_min_version[0],
+        vmin=python_min_version[1],
+        curver=sys.version))
 
 setup(
     name = 'pirogue',
@@ -17,9 +24,7 @@ setup(
     author_email = 'denis.rouzaud@gmail.com',
     url = 'https://github.com/opengisch/pirogue',
     download_url = 'https://github.com/opengisch/pirogue/archive/[VERSION].tar.gz', # I'll explain this in a second
-    keywords = [
-        'postgres'
-    ],
+    keywords = ['postgres'],
     classifiers = [
         'Topic :: Database',
         'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
@@ -30,5 +35,5 @@ setup(
     install_requires = [
         'psycopg2-binary>=2.7.3'
     ],
-    python_requires=">=3.3",
+    python_requires=">={vmaj}.{vmin}".format(vmaj=python_min_version[0], vmin=python_min_version[1]),
 )

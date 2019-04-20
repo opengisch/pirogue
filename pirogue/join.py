@@ -86,6 +86,7 @@ class Join:
                 print("*** Failing:\n{}\n***".format(sql))
                 raise e
         self.conn.commit()
+        self.conn.close()
         return True
 
     def __view(self) -> str:

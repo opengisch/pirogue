@@ -1,22 +1,22 @@
 
 
 # view_schema
-# view_name
-# alias
+view_name: ordered_view
 table: pirogue_test.animal
+type_name: my_custom_type
 
 joins:
   cat:
     table: pirogue_test.cat
-    remap_columns:
-      fk_breed: fk_cat_breed
+    skip_columns:
+      - fk_breed
+    columns_on_top:
+      - eye_color
 
   dog:
     table: pirogue_test.dog
-    remap_columns:
-      fk_breed: fk_dog_breed
-    skip_columns:
-      - eye_color
+    columns:
+      - fk_breed
 
   aardvark:
     table: pirogue_test.aardvark

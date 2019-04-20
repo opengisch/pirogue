@@ -46,8 +46,6 @@ CREATE TABLE pirogue_test.eagle (
 	weight double precision);
 
 
-
-
 INSERT INTO pirogue_test.cat_breed (id, breed_name) VALUES (1, 'Abyssinian');
 INSERT INTO pirogue_test.cat_breed (id, breed_name) VALUES (2, 'American Bobtail');
 INSERT INTO pirogue_test.dog_breed (id, breed_name) VALUES (1, 'Afghan Hound');
