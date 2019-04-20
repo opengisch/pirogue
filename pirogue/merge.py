@@ -202,7 +202,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                     .format(al=table_def['short_alias'],
                                                             tb=table_def['table'],
                                                             rmk=table_def['ref_master_key'],
-                                                            rba=table_def['referenced_by_alias'],
+                                                            rba={**self.main_table_def, **self.joins}[table_def['referenced_by_alias']]['short_alias'],
                                                             mpk=table_def['referenced_by_key']) for table_def in self.joins.values()],
                                           sep='\n    ')
                    )
