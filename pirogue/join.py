@@ -159,11 +159,11 @@ CREATE TRIGGER tr_{dt}_on_insert
 CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_update() RETURNS trigger AS
 $BODY$
 BEGIN
-  UPDATE {sa}.{ta}"
-    SET {master_up_cols}"
+  UPDATE {sa}.{ta}
+    SET {master_up_cols}
     WHERE {apk} = OLD.{apk};
-  UPDATE {sb}.{tb}"
-    SET {joined_up_cols}"
+  UPDATE {sb}.{tb}
+    SET {joined_up_cols}
     WHERE {bpk} = OLD.{rak};
 RETURN NEW;
 END;

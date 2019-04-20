@@ -264,7 +264,6 @@ BEGIN
   {insert_trigger_pre}
   {insert_master}
   {insert_joins}
-  
   {insert_trigger_post}
 RETURN NEW;
 END;
@@ -287,7 +286,17 @@ FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
                    master_cols=list2str(self.master_cols, prepend='\n        '),
                    mkp_def=default_value(self.cursor, self.master_schema, self.master_table, self.master_pkey),
                    master_new_cols=list2str(self.master_cols_wo_pkey, prepend='\n        NEW.', append='')),
-           insert_joins=list2str([], prepend='\n'),
+           insert_joins=list2str(["""
+    INSERT INTO {js}.{jt}( {join_cols} ) 
+      VALUES ( 
+        COALESCE( NEW.{jpk}, {jkp_def} ),  {join_new_cols} );"""
+            .format(js=table_def['table_schema'],
+                    jt=table_def['table_name'],
+                    jpk=table_def['pkey'],
+                    join_cols=list2str(table_def['cols'], prepend='\n        '),
+                    jkp_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
+                    join_new_cols=list2str(table_def['cols_wo_ref_key'], prepend='\n        NEW.', append=''))
+            for alias, table_def in self.joins.items() if not table_def['is_type']], sep='\n'),
            insert_trigger_post=self.insert_trigger_post)
         print(sql)
         return sql
