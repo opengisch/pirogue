@@ -15,6 +15,9 @@ class ReferencedTableDefinedBeforeReferencing(Exception):
 class InvalidDefinition(Exception):
     pass
 
+class VariableError(Exception):
+    pass
+
 
 class Merge:
     """
@@ -169,6 +172,13 @@ class Merge:
                     self.cursor.execute(sql, self.variables)
                 else:
                     self.cursor.execute(sql)
+            except TypeError as e:
+                print("*** Failing:\n{}\n***".format(sql))
+                raise VariableError("An error in a SQL variable is probable. "
+                                    "Check the variables in the SQL code "
+                                    "(were given: {svars}). "
+                                    "Also, any % character shall be escaped with %%"
+                                    .format(svars=list(self.variables.keys())))
             except psycopg2.Error as e:
                 print("*** Failing:\n{}\n***".format(sql))
                 raise e
@@ -263,7 +273,11 @@ $BODY$
 BEGIN
   {insert_trigger_pre}
   {insert_master}
-  {insert_joins}
+  {insert_joins_wo_type}
+  CASE {insert_type_joins}
+  ELSE
+     RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR
+  END CASE;
   {insert_trigger_post}
 RETURN NEW;
 END;
@@ -280,23 +294,37 @@ FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
     INSERT INTO {ms}.{mt} ( {master_cols} )
       VALUES (
         COALESCE( NEW.{mpk}, {mkp_def} ),  {master_new_cols} );"""
-           .format(ms=self.master_schema,
-                   mt=self.master_table,
-                   mpk=self.master_pkey,
-                   master_cols=list2str(self.master_cols, prepend='\n        '),
-                   mkp_def=default_value(self.cursor, self.master_schema, self.master_table, self.master_pkey),
-                   master_new_cols=list2str(self.master_cols_wo_pkey, prepend='\n        NEW.', append='')),
-           insert_joins=list2str(["""
+                         .format(ms=self.master_schema,
+                                 mt=self.master_table,
+                                 mpk=self.master_pkey,
+                                 master_cols=list2str(self.master_cols, prepend='\n        '),
+                                 mkp_def=default_value(self.cursor, self.master_schema, self.master_table, self.master_pkey),
+                                 master_new_cols=list2str(self.master_cols_wo_pkey, prepend='\n        NEW.', append='')),
+           insert_joins_wo_type=list2str(["""
     INSERT INTO {js}.{jt}( {join_cols} ) 
       VALUES ( 
         COALESCE( NEW.{jpk}, {jkp_def} ),  {join_new_cols} );"""
-            .format(js=table_def['table_schema'],
-                    jt=table_def['table_name'],
-                    jpk=table_def['pkey'],
-                    join_cols=list2str(table_def['cols'], prepend='\n        '),
-                    jkp_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
-                    join_new_cols=list2str(table_def['cols_wo_ref_key'], prepend='\n        NEW.', append=''))
+                                .format(js=table_def['table_schema'],
+                                        jt=table_def['table_name'],
+                                        jpk=table_def['pkey'],
+                                        join_cols=list2str(table_def['cols'], prepend='\n        '),
+                                        jkp_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
+                                        join_new_cols=list2str(table_def['cols_wo_ref_key'], prepend='\n        NEW.', append=''))
             for alias, table_def in self.joins.items() if not table_def['is_type']], sep='\n'),
+           insert_type_joins=list2str(["""
+    WHEN NEW.ws_type = 'manhole' THEN
+      INSERT INTO {js}.{jt}( {join_cols} ) 
+      VALUES ( 
+        COALESCE( NEW.{jpk}, {jkp_def} ),  {join_new_cols} );"""
+                                .format(js=table_def['table_schema'],
+                                        jt=table_def['table_name'],
+                                        jpk=table_def['pkey'],
+                                        join_cols=list2str(table_def['cols'], prepend='\n        '),
+                                        jkp_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
+                                        join_new_cols=list2str(table_def['cols_wo_ref_key'], prepend='\n        NEW.', append=''))
+            for alias, table_def in self.joins.items() if table_def['is_type']], sep='\n'),
+           percent_char='%%' if self.variables else '%',  # if variables, % should be escaped because cursor.execute is run with variables
+           type_name=self.type_name,
            insert_trigger_post=self.insert_trigger_post)
         print(sql)
         return sql
