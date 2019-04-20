@@ -12,10 +12,14 @@ joins:
       - fk_breed
     columns_on_top:
       - eye_color
+    remap_columns:
+      eye_color: eye_color_renamed
 
   dog:
     table: pirogue_test.dog
     columns:
+      - fk_breed
+    columns_at_end:
       - fk_breed
 
   aardvark:

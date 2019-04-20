@@ -45,7 +45,8 @@ class Merge:
                 if key not in ('table', 'short_alias', 'columns',
                                'skip_columns', 'fkey', 'is_type',
                                'referenced_by', 'referenced_by_key',
-                               'remap_columns', 'prefix', 'columns_on_top'):
+                               'remap_columns', 'prefix', 'columns_on_top',
+                               'columns_at_end'):
                     raise InvalidDefinition('in join {a} key "{k}" is not valid'.format(a=alias, k=key))
 
 
@@ -122,7 +123,6 @@ class Merge:
             # fix lower levels references (table not linked to the master table)
             if 'referenced_by' in table_def:
                 table_def['reference_master_table'] = table_def.get('is_type', False)
-                table_def['referenced_by_alias'] = self.joins[table_def['referenced_by']]['short_alias']
                 try:
                     table_def['referenced_by_key'] = table_def.get('referenced_by_key', None) or \
                                                      reference_columns(self.cursor,
@@ -139,7 +139,7 @@ class Merge:
                                                                                                                  rg=table_def['referenced_by']))
             else:
                 table_def['reference_master_table'] = table_def.get('is_type', True)
-                table_def['referenced_by_alias'] = self.view_alias
+                table_def['referenced_by'] = self.view_alias
                 table_def['referenced_by_key'] = table_def.get('referenced_by_key', None) or self.master_pkey
 
     def create(self) -> bool:
@@ -211,8 +211,8 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                         (alias, table_def, col)
                                         for alias, table_def in {**self.main_table_def, **self.joins}.items()
                                         for col in table_def['cols_wo_ref_key']
-                                     # sort columns by 'columns_on_top' first, then by table, then y column order
-                                     ], key=lambda x: (0 if x[2] in x[1].get('columns_on_top', []) else 1,
+                                     # sort columns by 'columns_on_top'/normal/'columns_at_end' first, then by table, then y column order
+                                     ], key=lambda x: (0 if x[2] in x[1].get('columns_on_top', []) else 2 if x[2] in x[1].get('columns_at_end', []) else 1,
                                                        list(self.joins.keys()).index(x[0])+1 if x[0] in self.joins else 0,
                                                        x[1]['cols'].index(x[2]))
                                      )],
@@ -224,7 +224,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                     .format(al=table_def['short_alias'],
                                                             tb=table_def['table'],
                                                             rmk=table_def['ref_master_key'],
-                                                            rba={**self.main_table_def, **self.joins}[table_def['referenced_by_alias']]['short_alias'],
+                                                            rba={**self.main_table_def, **self.joins}[table_def['referenced_by']]['short_alias'],
                                                             mpk=table_def['referenced_by_key']) for table_def in self.joins.values()],
                                           sep='\n    ')
                    )
