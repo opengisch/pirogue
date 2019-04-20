@@ -122,24 +122,6 @@ class Merge:
                 table_def['referenced_by_alias'] = self.view_alias
                 table_def['referenced_by_key'] = table_def.get('referenced_by_key', None) or self.master_pkey
 
-
-        # print(list2str([ alias+' '+col   for alias, table_def in self.joins.items()
-        #                      for col in table_def['cols_wo_ref_key']], prepend='\n'))
-        # raise Exception
-        # print(list2str( [alias+' '+col
-        #                  for (alias, col)
-        #                  in sorted(
-        #                     [ (alias,col) for alias, table_def in self.joins.items()
-        #                                   for col in table_def['cols_wo_ref_key']
-        #                     ]
-        #                     , key=lambda x: (0 if x[1] in self.joins[x[0]].get('columns_on_top', []) else 1,
-        #                                      list(self.joins.keys()).index(x[0]),
-        #                                      list(self.joins[x[0]]['cols']).index(x[1]))
-        #                     )],
-        #                     prepend='\n'))
-        # raise Exception
-
-
     def create(self) -> bool:
         """
 
@@ -189,7 +171,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
       {type}
       ELSE 'unknown'::text
     END AS {type_name}{columns}
-  FROM {ms}.{mt} {alias}
+  FROM {ms}.{mt} {sa}
     {joined_tables};
                 
         """.format(vs=self.view_schema,
@@ -200,23 +182,22 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                            for alias, table_def in self.joins.items() if table_def['reference_master_table']],
                                  sep='\n      '),
                    type_name=self.type_name,
-                   #master_cols=list2str(self.master_cols, prepend='\n    {al}.'.format(al=self.view_alias), prepend_to_list=','),
                    columns=list2str(['{table_alias}.{column}{col_alias}'.format(table_alias=table_def['short_alias'],
-                                                                                    column=col,
-                                                                                    col_alias=self.column_alias(table_def, col, prepend_as=True))
-                                         for (alias, table_def, col)
-                                         in sorted(
-                           [(alias, table_def, col) for alias, table_def in {**self.main_table_def, **self.joins}.items()
-                            for col in table_def['cols_wo_ref_key']
-                            ]
-                           , key=lambda x: (0 if x[2] in x[1].get('columns_on_top', []) else 1,
-                                            list(self.joins.keys()).index(x[0])+1 if x[0] in self.joins else 0,
-                                            x[1]['cols'].index(x[2]))
-                       )],
-                                        prepend='\n    ', prepend_to_list=','),
+                                                                                column=col,
+                                                                                col_alias=self.column_alias(table_def, col, prepend_as=True))
+                                     for (alias, table_def, col)
+                                     in sorted([
+                                        (alias, table_def, col)
+                                        for alias, table_def in {**self.main_table_def, **self.joins}.items()
+                                        for col in table_def['cols_wo_ref_key']
+                                     ], key=lambda x: (0 if x[2] in x[1].get('columns_on_top', []) else 1,
+                                                       list(self.joins.keys()).index(x[0])+1 if x[0] in self.joins else 0,
+                                                       x[1]['cols'].index(x[2]))
+                                     )],
+                                    prepend='\n    ', prepend_to_list=','),
                    ms=self.master_schema,
                    mt=self.master_table,
-                   alias=self.view_alias,
+                   sa=self.short_alias,
                    joined_tables=list2str(elements=["LEFT JOIN {tb} {al} ON {al}.{rmk} = {rba}.{mpk}"
                                                     .format(al=table_def['short_alias'],
                                                             tb=table_def['table'],
