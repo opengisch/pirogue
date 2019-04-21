@@ -2,6 +2,7 @@
 
 from psycopg2.extensions import cursor
 
+
 class TableHasNoPrimaryKey(Exception):
     pass
 

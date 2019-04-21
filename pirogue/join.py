@@ -65,7 +65,7 @@ class Join:
         except TableHasNoPrimaryKey:
             self.master_pkey = self.ref_master_key
         self.joined_pkey = primary_key(self.cursor, self.joined_schema, self.joined_table)
-        self.joined_cols_wo_pkey = columns(self.cursor, self.joined_schema, self.joined_table, True)
+        self.joined_cols_wo_pkey = columns(self.cursor, self.joined_schema, self.joined_table, remove_pkey=True)
         self.master_cols_wo_pkey = list(self.master_cols)  # make a copy, otherwise keeps reference
         self.master_cols_wo_pkey.remove(self.master_pkey)
 

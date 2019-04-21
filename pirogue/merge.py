@@ -187,8 +187,7 @@ class Merge:
         :return:
         """
         for sql in [self.__view(),
-                    self.__insert_trigger(),
-                    self.__update_trigger()]:
+                    self.__insert_trigger()]:
             try:
                 if self.variables:
                     self.cursor.execute(sql, self.variables)
