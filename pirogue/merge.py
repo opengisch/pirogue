@@ -349,17 +349,17 @@ FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
                                         join_new_cols=list2str(self.column_values(table_def, table_def['cols_insert_update_wo_ref_key']), prepend='\n      ', append=''))
             for alias, table_def in self.joins.items() if not table_def.get('is_type', True)], sep='\n'),
            insert_type_joins=list2str(["""
-    WHEN NEW.ws_type = 'manhole' THEN
+    WHEN NEW.ws_type = '{alias}' THEN
       INSERT INTO {js}.{jt}( 
         {jpk},{join_cols} ) 
       VALUES ( 
-        COALESCE( {jpk_val}, {jpk_def} ),  {join_new_cols} );"""
-                                .format(js=table_def['table_schema'],
+        NEW.{jpk_val},  {join_new_cols} );"""
+                                .format(alias=alias,
+                                        js=table_def['table_schema'],
                                         jt=table_def['table_name'],
                                         jpk=table_def['pkey'],
                                         join_cols=list2str([col for col in table_def['cols_insert_update'] if col != table_def['pkey']], prepend='\n        '),
-                                        jpk_val=table_def.get('insert_values', {}).get(table_def['pkey'], 'NEW.{jpk}'.format(jpk=self.column_alias(table_def, table_def['pkey'], field_if_no_alias=True))),
-                                        jpk_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
+                                        jpk_val=self.column_alias({**self.main_table_def, **self.joins}[table_def['referenced_by']], table_def['referenced_by_key'], field_if_no_alias=True),
                                         join_new_cols=list2str(self.column_values(table_def, table_def['cols_insert_update_wo_ref_key']), prepend='\n        ', append=''))
             for alias, table_def in self.joins.items() if table_def.get('is_type', True)], sep='\n'),
            percent_char='%%' if self.variables else '%',  # if variables, % should be escaped because cursor.execute is run with variables
