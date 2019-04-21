@@ -2,7 +2,7 @@
 
 from psycopg2.extensions import cursor
 from enum import Enum
-from .information_schema import columns
+from .information_schema import columns, primary_key
 
 
 class InvalidColumn(Exception):
@@ -98,11 +98,13 @@ def select_columns(pg_cur: cursor,
                   key=lambda col: __column_priority(col))
 
     # check arguments
-    for dict_or_list in (remap_columns, columns_on_top, columns_at_end):
+    for param, dict_or_list in {'remap_columns': remap_columns,
+                                'columns_on_top': columns_on_top,
+                                'columns_at_end': columns_at_end}.items():
         for col in dict_or_list:
             if col not in cols:
-                raise InvalidColumn('Invalid column in insert_values paramater: "{tab}" has no column "{col}"'
-                                    .format(tab=table_name, col=col))
+                raise InvalidColumn('Invalid column in {param} paramater: "{tab}" has no column "{col}"'
+                                    .format(param=param, tab=table_name, col=col))
 
 
     return ',\n'.join(['{indent}{table_alias}.{column}{col_alias}'
@@ -153,11 +155,14 @@ def insert_command(pg_cur: cursor,
                   key=lambda col: __column_priority(col))
 
     # check arguments
-    for dict_or_list in (remap_columns, insert_values, columns_on_top, columns_at_end):
+    for param, dict_or_list in {'remap_columns': remap_columns,
+                                'insert_values': insert_values,
+                                'columns_on_top': columns_on_top,
+                                'columns_at_end': columns_at_end}.items():
         for col in dict_or_list:
             if col not in cols:
-                raise InvalidColumn('Invalid column in insert_values paramater: "{tab}" has no column "{col}"'
-                                    .format(tab=table_name, col=col))
+                raise InvalidColumn('Invalid column in {param} paramater: "{tab}" has no column "{col}"'
+                                    .format(param=param, tab=table_name, col=col))
 
     return """{indent}INSERT INTO {s}.{t} (
 {cols} ) 
@@ -176,6 +181,72 @@ def insert_command(pg_cur: cursor,
                                                                                                    field_if_no_alias=True))))
                                 for col in cols]))
 
+
+def update_command(pg_cur: cursor,
+                   table_schema: str,
+                   table_name: str,
+                   table_alias: str=None,
+                   table_type: str = 'table',
+                   skip_columns: list=[],
+                   remap_columns: dict = {},
+                   update_values: dict = {},
+                   columns_on_top: list=[],
+                   columns_at_end: list=[],
+                   prefix: str= None,
+                   indent: int=2) -> str:
+    """
+
+    :param pg_cur: the psycopg cursor
+    :param table_schema: the schema
+    :param table_name: the name of the table
+    :param table_type: the type of table, i.e. view or table
+    :param table_alias: if not specified, table is used
+    :param skip_columns: list of columns to be skipped
+    :param remap_columns: dictionary to remap columns
+    :param update_values: dictionary of expression to be used at insert
+    :param columns_on_top: bring the columns to the front of the list
+    :param columns_at_end: bring the columns to the end of the list
+    :param prefix: add a prefix to the columns (do not applied to remapped columns)
+    :param indent: add an indent in front
+    :return:
+    """
+    # get columns
+    cols = sorted(columns(pg_cur,
+                          table_schema=table_schema,
+                          table_name=table_name,
+                          table_type=table_type,
+                          remove_pkey=True,
+                          skip_columns=skip_columns),
+                  key=lambda col: __column_priority(col))
+
+    pkey = primary_key(pg_cur , table_schema, table_name)
+
+    # check arguments
+    for param, dict_or_list in {'remap_columns': remap_columns,
+                                'update_values': update_values,
+                                'columns_on_top': columns_on_top,
+                                'columns_at_end': columns_at_end}.items():
+        for col in dict_or_list:
+            if col not in cols:
+                raise InvalidColumn('Invalid column in {param} paramater: "{tab}" has no column "{col}"'
+                                    .format(param=param, tab=table_name, col=col))
+
+    return """{indent}UPDATE {s}.{t} SET
+{cols}
+{indent}  WHERE {pkey} = OLD.{pkey};
+""".format(indent=indent*' ',
+           s=table_schema,
+           t=table_name,
+           cols=',\n'.join(['{indent}    {col} = {new_col}'
+                               .format(indent=indent*' ',
+                                       col=col,
+                                       new_col=update_values.get(col,
+                                                               'NEW.{cal}'.format(cal=column_alias(col,
+                                                                                                   remap_columns=remap_columns,
+                                                                                                   prefix=prefix,
+                                                                                                   field_if_no_alias=True))))
+                                for col in cols]),
+           pkey=pkey)
 
 def update_columns(columns: list, sep:str=', ') -> str:
     return sep.join(["{c} = NEW.{c}".format(c=col) for col in columns])
