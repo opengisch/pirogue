@@ -4,7 +4,7 @@ import os
 import psycopg2
 import psycopg2.extras
 
-from pirogue.utils import table_parts, list2str, update_columns
+from pirogue.utils import table_parts, list2str, update_columns, column_alias
 from pirogue.information_schema import TableHasNoPrimaryKey, NoReferenceFound, \
     columns, reference_columns, primary_key, default_value
 
@@ -44,10 +44,10 @@ class Merge:
             if key not in ('table', 'sql_definition', 'fkey_is_pkey', 'view_schema',
                            'view_name', 'alias', 'short_alias',
                            'type_name', 'columns', 'key', 'joins',
-                           'columns_on_top', 'insert_trigger_pre', 'insert_trigger_post'):
+                           'columns_on_top', 'insert_trigger', 'update_trigger'):
                 raise InvalidDefinition('key {k} is not a valid'.format(k=key))
+        # check joins validity
         for alias, table_def in definition['joins'].items():
-            # check definition validity
             for key in table_def.keys():
                 if key not in ('table', 'short_alias', 'columns',
                                'skip_columns', 'fkey', 'is_type',
@@ -65,6 +65,12 @@ class Merge:
         for mandatory_key in ['joins']:
             if mandatory_key not in definition:
                 raise InvalidDefinition('Missing key: "{k}" should be provided.'.format(k=mandatory_key))
+        # check trigger modifiers validity
+        for trigger in ('insert_trigger', 'update_trigger'):
+            for key in definition.get(trigger, {}):
+                if key not in ('declare', 'pre', 'post'):
+                    raise InvalidDefinition('key {k} is not valid in trigger definitions'.format(k=key))
+
 
         (self.master_schema, self.master_table) = table_parts(definition.get('table', None))
 
@@ -76,8 +82,8 @@ class Merge:
         self.short_alias = definition.get('short_alias', self.view_alias)
         self.type_name = definition.get('type_name', '{al}_type'.format(al=self.view_alias))
         self.fkey_is_pkey = definition.get('fkey_is_pkey', False)
-        self.insert_trigger_pre = definition.get('insert_trigger_pre', '')
-        self.insert_trigger_post = definition.get('insert_trigger_post', '')
+        self.insert_trigger = definition.get('insert_trigger', {})
+        self.update_trigger = definition.get('update_trigger', {})
 
         try:
             self.master_pkey = definition.get('key', None) or primary_key(self.cursor, self.master_schema, self.master_table)
@@ -181,7 +187,8 @@ class Merge:
         :return:
         """
         for sql in [self.__view(),
-                    self.__insert_trigger()]:
+                    self.__insert_trigger(),
+                    self.__update_trigger()]:
             try:
                 if self.variables:
                     self.cursor.execute(sql, self.variables)
@@ -211,33 +218,11 @@ class Merge:
         values = []
         manual_values = table_def.get('insert_values', {})
         for col in columns:
-            values.append(manual_values.get(col, 'NEW.{cal}'.format(cal=self.column_alias(table_def, col,
-                                                                                          field_if_no_alias=True))))
+            values.append(manual_values.get(col, 'NEW.{cal}'.format(cal=column_alias(col,
+                                                                                     remap_columns=table_def.get('remap_columns', {}),
+                                                                                     prefix=table_def.get('prefix', None),
+                                                                                     field_if_no_alias=True))))
         return values
-
-    def column_alias(self, table_def: dict, column: str,
-                     field_if_no_alias: bool = False,
-                     prepend_as: bool = False) -> list:
-        """
-
-        :param table_alias:
-        :param column:
-        :param field_if_no_alias: if True, return the field if the alias doesn't exist. If False return an empty string
-        :param prepend_as: prepend " AS " to the alias
-        :return: empty string if there is no alias and (i.e = field name)
-        """
-        col_alias = ''
-        remap_dict = table_def.get('remap_columns', {})
-        prefix = table_def.get('prefix', None)
-        if column in remap_dict:
-            col_alias = remap_dict[column]
-        elif prefix:
-            col_alias = prefix + column
-        elif field_if_no_alias:
-            col_alias = column
-        if prepend_as and col_alias:
-            col_alias = ' AS {al}'.format(al=col_alias)
-        return col_alias
 
     @staticmethod
     def column_priority(table_def: dict, column: str) -> int:
@@ -271,8 +256,10 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
            type_name=self.type_name,
            columns=list2str(['{table_alias}.{column}{col_alias}'.format(table_alias=table_def['short_alias'],
                                                                         column=col,
-                                                                        col_alias=self.column_alias(table_def, col,
-                                                                                                    prepend_as=True))
+                                                                        col_alias=column_alias(col,
+                                                                                               remap_columns=table_def.get('remap_columns', {}),
+                                                                                               prefix=table_def.get('prefix', None),
+                                                                                               prepend_as=True))
                              for (alias, table_def, col)
                              in sorted([
                                 (alias, table_def, col)
@@ -304,6 +291,8 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
         sql = """-- INSERT TRIGGER
 CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_insert() RETURNS trigger AS
 $BODY$
+DECLARE
+  {declare}
 BEGIN
   {insert_trigger_pre}
   {insert_master}
@@ -324,7 +313,8 @@ INSTEAD OF INSERT ON {vs}.{vn}
 FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
 """.format(vs=self.view_schema,
            vn=self.view_name,
-           insert_trigger_pre=self.insert_trigger_pre,
+           declare=list2str(self.insert_trigger.get('declare', []), append=';', sep='\n  '),
+           insert_trigger_pre=self.insert_trigger.get('pre', ''),
            insert_master='' if self.sql_definition else """
   INSERT INTO {ms}.{mt} ( {master_cols} )
     VALUES (
@@ -344,7 +334,10 @@ FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
                                         jt=table_def['table_name'],
                                         jpk=table_def['pkey'],
                                         join_cols=list2str([col for col in table_def['cols_insert_update'] if col != table_def['pkey']], prepend='\n      '),
-                                        jpk_val=table_def.get('insert_values', {}).get(table_def['pkey'], 'NEW.{jpk}'.format(jpk=self.column_alias(table_def, table_def['pkey'], field_if_no_alias=True))),
+                                        jpk_val=table_def.get('insert_values', {}).get(table_def['pkey'], 'NEW.{jpk}'.format(jpk=column_alias(table_def['pkey'],
+                                                                                                                                              remap_columns=table_def.get('remap_columns', {}),
+                                                                                                                                              prefix=table_def.get('prefix', None),
+                                                                                                                                              field_if_no_alias=True))),
                                         jpk_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
                                         join_new_cols=list2str(self.column_values(table_def, table_def['cols_insert_update_wo_ref_key']), prepend='\n      ', append=''))
             for alias, table_def in self.joins.items() if not table_def.get('is_type', True)], sep='\n'),
@@ -359,65 +352,71 @@ FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
                                         jt=table_def['table_name'],
                                         jpk=table_def['pkey'],
                                         join_cols=list2str([col for col in table_def['cols_insert_update'] if col != table_def['pkey']], prepend='\n        '),
-                                        jpk_val=self.column_alias({**self.main_table_def, **self.joins}[table_def['referenced_by']], table_def['referenced_by_key'], field_if_no_alias=True),
+                                        jpk_val=column_alias(table_def['referenced_by_key'],
+                                                             remap_columns={**self.main_table_def, **self.joins}[table_def['referenced_by']].get('remap_columns', {}),
+                                                             prefix={**self.main_table_def, **self.joins}[table_def['referenced_by']].get('prefix', None),
+                                                             field_if_no_alias=True),
                                         join_new_cols=list2str(self.column_values(table_def, table_def['cols_insert_update_wo_ref_key']), prepend='\n        ', append=''))
             for alias, table_def in self.joins.items() if table_def.get('is_type', True)], sep='\n'),
            percent_char='%%' if self.variables else '%',  # if variables, % should be escaped because cursor.execute is run with variables
            type_name=self.type_name,
-           insert_trigger_post=self.insert_trigger_post)
-        print(sql)
+           insert_trigger_post=self.insert_trigger.get('post', ''))
         return sql
-
-
 
 
     def __update_trigger(self):
-        sql = "-- UPDATE TRIGGER\n" \
-              "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_update() RETURNS trigger AS\n " \
-              "$BODY$\n" \
-              "BEGIN\n" \
-              "  UPDATE {sa}.{ta}\n    SET {a_up_cols}\n    WHERE {apk} = OLD.{apk};\n" \
-              "  UPDATE {sb}.{tb}\n    SET {b_up_cols}\n    WHERE {bpk} = OLD.{rak};\n" \
-              "RETURN NEW;\n" \
-              "END;\n" \
-              "$BODY$\n" \
-              "LANGUAGE plpgsql;\n\n" \
-              "CREATE TRIGGER tr_{dt}_on_update\n" \
-              "  INSTEAD OF UPDATE ON {ds}.{dt}\n" \
-              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_update();\n\n" \
-            .format(ds=self.view_schema,
-                    dt=self.view_name,
-                    sa=self.schema_a,
-                    ta=self.table_a,
-                    apk=self.a_pkey,
-                    a_up_cols=update_columns(self.a_cols_wo_pkey, sep='\n    , '),
-                    sb=self.schema_b,
-                    tb=self.table_b,
-                    bpk=self.b_pkey,
-                    rak=self.ref_a_key,
-                    b_up_cols=update_columns(self.b_cols_wo_pkey, sep='\n    , '))
-        return sql
+        sql = """-- UPDATE TRIGGER
+CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_update() RETURNS trigger AS
+$BODY$
+DECLARE
+  {declare}
+BEGIN
+  {update_trigger_pre}
+  {update_master}
+  {update_joins_wo_type}
 
-    def __delete_trigger(self):
-        sql = "CREATE OR REPLACE FUNCTION {ds}.ft_{dt}_delete() RETURNS trigger AS\n" \
-              "$BODY$\n" \
-              "BEGIN\n" \
-              "  DELETE FROM {sa}.{ta} WHERE {apk} = OLD.{apk};\n" \
-              "  DELETE FROM {sb}.{tb} WHERE {bpk} = OLD.{rak};\n" \
-              "RETURN NULL;\n" \
-              "END;\n" \
-              "$BODY$\n" \
-              "LANGUAGE plpgsql;\n\n" \
-              "CREATE TRIGGER tr_{dt}_on_delete\n" \
-              "  INSTEAD OF DELETE ON {ds}.{dt}\n" \
-              "  FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_delete();\n\n" \
-            .format(ds=self.view_schema,
-                    dt=self.view_name,
-                    sa=self.schema_a,
-                    ta=self.table_a,
-                    apk=self.a_pkey,
-                    sb=self.schema_b,
-                    tb=self.table_b,
-                    bpk=self.b_pkey,
-                    rak=self.ref_a_key)
+  CASE {update_type_joins}
+  ELSE
+     RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR
+  END CASE;
+  {update_trigger_post}
+RETURN NEW;
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER tr_{vn}_on_update
+INSTEAD OF update ON {vs}.{vn}
+FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_update();
+        """.format(vs=self.view_schema,
+                   vn=self.view_name,
+                   declare=list2str(self.update_trigger.get('declare', []), append=';', sep='\n  '),
+                   update_trigger_pre=self.update_trigger.get('pre', ''),
+                   update_master='' if self.sql_definition else """
+  UPDATE {ms}.{mt} SET {master_cols} 
+    WHERE {mpk} = OLD.{mpk};"""
+                   .format(ms=self.master_schema,
+                           mt=self.master_table,
+                           master_cols=update_columns(self.master_cols_wo_pkey, sep='\n    , '),
+                           mpk=self.master_pkey),
+                   update_joins_wo_type=list2str(["""
+  UPDATE {js}.{jt} SET {join_cols}
+    WHERE {jpk} = OLD.{jpk};"""
+                                                 .format(js=table_def['table_schema'],
+                                                         jt=table_def['table_name'],
+                                                         jpk=table_def['pkey'],
+                                                         join_cols=list2str(
+                                                             ['{col} = {al}'
+                                                                  .format(col=col,
+                                                                          al=table_def.get('insert_values', {}).get(col, 'NEW.{cal}'.format(cal=column_alias(col, remap_columns=table_def.get('remap_columns', {}), prefix=table_def.get('prefix', None), field_if_no_alias=True))))
+                                                              for col in table_def['cols_insert_update'] if
+                                                              col != table_def['pkey']], prepend='\n    '))
+                                                  for alias, table_def in self.joins.items() if
+                                                  not table_def.get('is_type', True)], sep='\n'),
+                   update_type_joins="WHEN FALSE THEN NULL",
+                   percent_char='%%' if self.variables else '%',
+                   # if variables, % should be escaped because cursor.execute is run with variables
+                   type_name=self.type_name,
+                   update_trigger_post=self.update_trigger.get('post', ''))
+        print(sql)
         return sql
