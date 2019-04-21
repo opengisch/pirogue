@@ -6,7 +6,12 @@ from psycopg2.extensions import cursor
 class TableHasNoPrimaryKey(Exception):
     pass
 
+
 class NoReferenceFound(Exception):
+    pass
+
+
+class InvalidSkipColumns(Exception):
     pass
 
 
@@ -51,7 +56,13 @@ def columns(pg_cur: cursor, schema: str, table: str, remove_pkey: bool=False, sk
                    " ORDER BY attnum ASC"\
                    .format(s=schema, t=table))
     pg_fields = pg_cur.fetchall()
-    pg_fields = [field[0] for field in pg_fields if field[0] not in skip_columns]
+    pg_fields = [field[0] for field in pg_fields if field[0]]
+    for col in skip_columns:
+        try:
+            pg_fields.remove(col)
+        except ValueError:
+            raise InvalidSkipColumns('Cannot skip unexisting column "{col}" in "{s}.{t}"'.format(col=col, s=schema,
+                                                                                                 t=table))
     if remove_pkey:
         pkey = primary_key(pg_cur, schema, table)
         pg_fields.remove(pkey)

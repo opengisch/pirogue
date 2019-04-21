@@ -21,7 +21,7 @@ class VariableError(Exception):
 
 class Merge:
     """
-    Creates a simple join view with associated triggers to edit.
+    Creates a merge view with associated triggers to edit.
     """
 
     def __init__(self, definition: dict, pg_service: str = None, variables: dict = {}):
@@ -53,7 +53,8 @@ class Merge:
                                'skip_columns', 'fkey', 'is_type',
                                'referenced_by', 'referenced_by_key',
                                'remap_columns', 'prefix', 'columns_on_top',
-                               'columns_at_end', 'columns_no_insert_or_update'):
+                               'columns_at_end', 'columns_no_insert_or_update',
+                               'insert_values'):
                     raise InvalidDefinition('in join {a} key "{k}" is not valid'.format(a=alias, k=key))
         if 'sql_definition' not in definition and 'table' not in definition:
             raise InvalidDefinition('Missing key: "table" or "sql_definition" should be provided.')
@@ -105,10 +106,13 @@ class Merge:
             (table_def['table_schema'], table_def['table_name']) = table_parts(table_def['table'])
             table_def['short_alias'] = table_def.get('short_alias', alias)
             table_def['cols'] = table_def.get('columns', None) or columns(self.cursor, table_def['table_schema'],
-                                                                               table_def['table_name'],
-                                                                               skip_columns=table_def.get('skip_columns', []))
+                                                                          table_def['table_name'],
+                                                                          skip_columns=table_def.get('skip_columns', []))
             table_def['cols_insert_update'] = [col for col in table_def['cols']
                                                if col not in table_def.get('columns_no_insert_or_update', [])]
+            for col in table_def.get('insert_values', {}):
+                if col not in table_def['cols_insert_update']:
+                    table_def['cols_insert_update'].append(col)
 
 
             if 'fkey' in table_def:
@@ -162,6 +166,15 @@ class Merge:
                 table_def['referenced_by'] = self.view_alias
                 table_def['referenced_by_key'] = table_def.get('referenced_by_key', None) or self.master_pkey
 
+            # control existence of columns
+            for dct in ('remap_columns', 'insert_values', 'skip_columns',
+                        'columns_on_top', 'columns_at_end', 'columns',
+                        'columns_no_insert_or_update'):
+                for col in table_def.get(dct, {}):
+                    if col not in columns(self.cursor, table_def['table_schema'], table_def['table_name']):
+                        raise InvalidDefinition('In {dct}, column "{col}" '
+                                                'does not exist for table {al}'.format(dct=dct, col=col, al=alias))
+
     def create(self) -> bool:
         """
 
@@ -188,21 +201,40 @@ class Merge:
         self.conn.close()
         return True
 
-    def column_alias(self, table_def: dict, column: str, prepend_as: bool = False) -> str:
+    def column_values(self, table_def: dict, columns: list) -> list:
+        """
+
+        :param table_def:
+        :param columns:
+        :return:
+        """
+        values = []
+        manual_values = table_def.get('insert_values', {})
+        for col in columns:
+            values.append(manual_values.get(col, 'NEW.{cal}'.format(cal=self.column_alias(table_def, col,
+                                                                                          field_if_no_alias=True))))
+        return values
+
+    def column_alias(self, table_def: dict, column: str,
+                     field_if_no_alias: bool = False,
+                     prepend_as: bool = False) -> list:
         """
 
         :param table_alias:
         :param column:
-        :param prepend_as:
-        :return: empty string if there is no alias (i.e = field name)
+        :param field_if_no_alias: if True, return the field if the alias doesn't exist. If False return an empty string
+        :param prepend_as: prepend " AS " to the alias
+        :return: empty string if there is no alias and (i.e = field name)
         """
-        col_alias = ""
+        col_alias = ''
         remap_dict = table_def.get('remap_columns', {})
         prefix = table_def.get('prefix', None)
         if column in remap_dict:
             col_alias = remap_dict[column]
         elif prefix:
             col_alias = prefix + column
+        elif field_if_no_alias:
+            col_alias = column
         if prepend_as and col_alias:
             col_alias = ' AS {al}'.format(al=col_alias)
         return col_alias
@@ -276,6 +308,7 @@ BEGIN
   {insert_trigger_pre}
   {insert_master}
   {insert_joins_wo_type}
+  
   CASE {insert_type_joins}
   ELSE
      RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR
@@ -293,9 +326,9 @@ FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
            vn=self.view_name,
            insert_trigger_pre=self.insert_trigger_pre,
            insert_master='' if self.sql_definition else """
-    INSERT INTO {ms}.{mt} ( {master_cols} )
-      VALUES (
-        COALESCE( NEW.{mpk}, {mkp_def} ),  {master_new_cols} );"""
+  INSERT INTO {ms}.{mt} ( {master_cols} )
+    VALUES (
+      COALESCE( NEW.{mpk}, {mkp_def} ),  {master_new_cols} );"""
                          .format(ms=self.master_schema,
                                  mt=self.master_table,
                                  mpk=self.master_pkey,
@@ -303,27 +336,31 @@ FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
                                  mkp_def=default_value(self.cursor, self.master_schema, self.master_table, self.master_pkey),
                                  master_new_cols=list2str(self.master_cols_wo_pkey, prepend='\n        NEW.', append='')),
            insert_joins_wo_type=list2str(["""
-    INSERT INTO {js}.{jt}( {join_cols} ) 
-      VALUES ( 
-        COALESCE( NEW.{jpk}, {jkp_def} ),  {join_new_cols} );"""
+  INSERT INTO {js}.{jt}(
+      {jpk},{join_cols} ) 
+    VALUES ( 
+      COALESCE( {jpk_val}, {jpk_def} ),  {join_new_cols} );"""
                                 .format(js=table_def['table_schema'],
                                         jt=table_def['table_name'],
                                         jpk=table_def['pkey'],
-                                        join_cols=list2str(table_def['cols_insert_update'], prepend='\n        '),
-                                        jkp_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
-                                        join_new_cols=list2str(table_def['cols_insert_update_wo_ref_key'], prepend='\n        NEW.', append=''))
+                                        join_cols=list2str([col for col in table_def['cols_insert_update'] if col != table_def['pkey']], prepend='\n      '),
+                                        jpk_val=table_def.get('insert_values', {}).get(table_def['pkey'], 'NEW.{jpk}'.format(jpk=self.column_alias(table_def, table_def['pkey'], field_if_no_alias=True))),
+                                        jpk_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
+                                        join_new_cols=list2str(self.column_values(table_def, table_def['cols_insert_update_wo_ref_key']), prepend='\n      ', append=''))
             for alias, table_def in self.joins.items() if not table_def.get('is_type', True)], sep='\n'),
            insert_type_joins=list2str(["""
     WHEN NEW.ws_type = 'manhole' THEN
-      INSERT INTO {js}.{jt}( {join_cols} ) 
+      INSERT INTO {js}.{jt}( 
+        {jpk},{join_cols} ) 
       VALUES ( 
-        COALESCE( NEW.{jpk}, {jkp_def} ),  {join_new_cols} );"""
+        COALESCE( {jpk_val}, {jpk_def} ),  {join_new_cols} );"""
                                 .format(js=table_def['table_schema'],
                                         jt=table_def['table_name'],
                                         jpk=table_def['pkey'],
-                                        join_cols=list2str(table_def['cols'], prepend='\n        '),
-                                        jkp_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
-                                        join_new_cols=list2str(table_def['cols_wo_ref_key'], prepend='\n        NEW.', append=''))
+                                        join_cols=list2str([col for col in table_def['cols_insert_update'] if col != table_def['pkey']], prepend='\n        '),
+                                        jpk_val=table_def.get('insert_values', {}).get(table_def['pkey'], 'NEW.{jpk}'.format(jpk=self.column_alias(table_def, table_def['pkey'], field_if_no_alias=True))),
+                                        jpk_def=default_value(self.cursor, table_def['table_schema'], table_def['table_name'], table_def['pkey']),
+                                        join_new_cols=list2str(self.column_values(table_def, table_def['cols_insert_update_wo_ref_key']), prepend='\n        ', append=''))
             for alias, table_def in self.joins.items() if table_def.get('is_type', True)], sep='\n'),
            percent_char='%%' if self.variables else '%',  # if variables, % should be escaped because cursor.execute is run with variables
            type_name=self.type_name,
