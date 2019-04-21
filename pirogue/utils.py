@@ -5,6 +5,10 @@ from enum import Enum
 from .information_schema import columns
 
 
+class InvalidColumn(Exception):
+    pass
+
+
 def table_parts(name: str) -> (str, str):
     """
     Returns a tuple with schema and table names
@@ -92,6 +96,15 @@ def select_columns(pg_cur: cursor,
                           remove_pkey=remove_pkey,
                           skip_columns=skip_columns),
                   key=lambda col: __column_priority(col))
+
+    # check arguments
+    for dict_or_list in (remap_columns, columns_on_top, columns_at_end):
+        for col in dict_or_list:
+            if col not in cols:
+                raise InvalidColumn('Invalid column in insert_values paramater: "{tab}" has no column "{col}"'
+                                    .format(tab=table_name, col=col))
+
+
     return ',\n'.join(['{indent}{table_alias}.{column}{col_alias}'
                       .format(indent=indent*' ',
                               table_alias=table_alias or table_name,
@@ -130,6 +143,7 @@ def insert_command(pg_cur: cursor,
     :param indent: add an indent in front
     :return:
     """
+    # get columns
     cols = sorted(columns(pg_cur,
                           table_schema=table_schema,
                           table_name=table_name,
@@ -138,10 +152,13 @@ def insert_command(pg_cur: cursor,
                           skip_columns=skip_columns),
                   key=lambda col: __column_priority(col))
 
-    for col in insert_values.keys():
-        if col not in cols:
-            raise InvalidColumn('Invalid column in insert_values paramater: "{tab}" has no column "{col}"'
-                                .format(tab=table_name, col=col))
+    # check arguments
+    for dict_or_list in (remap_columns, insert_values, columns_on_top, columns_at_end):
+        for col in dict_or_list:
+            if col not in cols:
+                raise InvalidColumn('Invalid column in insert_values paramater: "{tab}" has no column "{col}"'
+                                    .format(tab=table_name, col=col))
+
     return """{indent}INSERT INTO {s}.{t} (
 {cols} ) 
 {indent}VALUES ( 
