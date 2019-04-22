@@ -66,14 +66,15 @@ def select_columns(pg_cur: cursor,
                    table_name: str,
                    table_type: str = 'table',
                    table_alias: str = None,
-                   remove_pkey: bool=True,
-                   skip_columns: list=[],
+                   remove_pkey: bool = True,
+                   skip_columns: list = [],
+                   columns_list: list = None,
                    comment_skipped: bool = True,
                    remap_columns: dict = {},
-                   columns_on_top: list=[],
-                   columns_at_end: list=[],
-                   prefix: str= None,
-                   indent: int=2) -> str:
+                   columns_on_top: list = [],
+                   columns_at_end: list = [],
+                   prefix: str = None,
+                   indent: int = 2) -> str:
     """
 
     :param pg_cur: the psycopg cursor
@@ -83,6 +84,7 @@ def select_columns(pg_cur: cursor,
     :param table_alias: if not specified, table is used
     :param remove_pkey: if True, the primary is removed from the list
     :param skip_columns: list of columns to be skipped
+    :param columns_list: if given use as list of columns
     :param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
     If remove_pkey is True, the primary key will not be printed
     :param remap_columns: dictionary to remap columns
@@ -92,11 +94,11 @@ def select_columns(pg_cur: cursor,
     :param indent: add an indent in front
     :return:
     """
-    cols = sorted(columns(pg_cur,
-                          table_schema=table_schema,
-                          table_name=table_name,
-                          table_type=table_type,
-                          remove_pkey=remove_pkey),
+    cols = sorted(columns_list or columns(pg_cur,
+                                          table_schema=table_schema,
+                                          table_name=table_name,
+                                          table_type=table_type,
+                                          remove_pkey=remove_pkey),
                   key=lambda col: __column_priority(col))
 
     # check arguments
