@@ -1,2 +1,4 @@
 # pirogue
-A script to automatically create views and triggers on Postgres databases
+A tool to automatically create views and triggers on PostgreSQL databases
+
+

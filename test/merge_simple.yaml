@@ -1,0 +1,27 @@
+
+
+# view_schema
+# view_name
+# alias
+table: pirogue_test.animal
+
+joins:
+  cat:
+    table: pirogue_test.cat
+    remap_columns:
+      fk_breed: fk_cat_breed
+
+  dog:
+    table: pirogue_test.dog
+    remap_columns:
+      fk_breed: fk_dog_breed
+    skip_columns:
+      - eye_color
+
+  aardvark:
+    table: pirogue_test.aardvark
+    short_alias: aa
+
+  eagle:
+    table: pirogue_test.eagle
+    prefix: ea_

@@ -7,6 +7,14 @@ class TableHasNoPrimaryKey(Exception):
     pass
 
 
+class NoReferenceFound(Exception):
+    pass
+
+
+class InvalidSkipColumns(Exception):
+    pass
+
+
 def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
     """
     Returns the primary of a table
@@ -30,26 +38,49 @@ def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
     return pkey
 
 
-def columns(pg_cur: cursor, schema: str, table: str, remove_pkey: bool=False) -> list:
+def columns(pg_cur: cursor, table_schema: str, table_name: str, table_type: str = 'table',
+            remove_pkey: bool=False, skip_columns: list=[]) -> list:
     """
     Returns the columns of a table
     :param pg_cur: psycopg cursor
-    :param schema: the schema
-    :param table: the table
+    :param table_schema: the table_schema
+    :param table_name: the table
+    :param table_type: the type of table, i.e. view or table
     :param remove_pkey: if True, the primary key is dropped
+    :param skip_columns: list of columns to be skipped
     :return: the list of columns
     """
-    pg_cur.execute("SELECT attname"
-                   " FROM pg_attribute "
-                   " WHERE attrelid = '{s}.{t}'::regclass"
-                   " AND attisdropped IS NOT TRUE "
-                   " AND attnum > 0 "
-                   " ORDER BY attnum ASC"\
-                   .format(s=schema, t=table))
+    assert table_type.lower() in ('table', 'view')
+    if table_type.lower() == 'table':
+        sql = """SELECT attname
+                    FROM pg_attribute 
+                    WHERE attrelid = '{s}.{t}'::regclass
+                    AND attisdropped IS NOT TRUE 
+                    AND attnum > 0 
+                    ORDER BY attnum ASC""".format(s=table_schema, t=table_name)
+    else:
+        sql = """
+            SELECT c.column_name
+                FROM information_schema.tables t
+                    LEFT JOIN information_schema.columns c
+                              ON t.table_schema = c.table_schema
+                              AND t.table_name = c.table_name
+                WHERE table_type = 'VIEW'
+                      AND t.table_schema = '{s}'
+                      AND t.table_name = '{t}'
+                ORDER BY ordinal_position""".format(s=table_schema, t=table_name)
+
+    pg_cur.execute(sql)
     pg_fields = pg_cur.fetchall()
-    pg_fields = [field[0] for field in pg_fields]
+    pg_fields = [field[0] for field in pg_fields if field[0]]
+    for col in skip_columns:
+        try:
+            pg_fields.remove(col)
+        except ValueError:
+            raise InvalidSkipColumns('Cannot skip unexisting column "{col}" in "{s}.{t}"'.format(col=col, s=table_schema,
+                                                                                                 t=table_name))
     if remove_pkey:
-        pkey = primary_key(pg_cur, schema, table)
+        pkey = primary_key(pg_cur, table_schema, table_name)
         pg_fields.remove(pkey)
     return pg_fields
 
@@ -85,7 +116,11 @@ def reference_columns(pg_cur: cursor,
                                                    fts=foreign_table_schema)
     pg_cur.execute(sql)
     cols = pg_cur.fetchone()
-    assert len(cols) == 2
+    if not cols:
+        raise NoReferenceFound('{ts}.{tn} has no reference to {fts}.{ftn}'.format(tn=table_name,
+                                                                                  ts=table_schema,
+                                                                                  ftn=foreign_table_name,
+                                                                                  fts=foreign_table_schema))
     return cols
 
 
