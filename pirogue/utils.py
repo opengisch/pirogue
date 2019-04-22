@@ -162,7 +162,7 @@ def insert_command(pg_cur: cursor,
                           remove_pkey=remove_pkey),
                   key=lambda col: __column_priority(col))
 
-    pkey = primary_key(pg_cur, table_schema, table_name)
+    pkey = primary_key(pg_cur, table_schema, table_name) if table_type=='table' else ''
 
     # check arguments
     for param, dict_or_list in {'skip_columns': skip_columns,
@@ -271,13 +271,13 @@ def update_command(pg_cur: cursor,
 
     next_comma_printed = [False]
 
-    return """UPDATE {s}.{t} {a} SET
+    return """UPDATE {s}.{t}{a} SET
 {indent}    {cols}
 {indent}  WHERE {where_clause};"""\
         .format(indent=indent*' ',
                 s=table_schema,
                 t=table_name,
-                a=table_alias,
+                a=' {alias}'.format(alias=table_alias) if table_alias else '',
                 cols='\n{indent}    '
                      .format(indent=indent*' ')
                      .join(['{skip}{comma}{col} = {new_col}'
