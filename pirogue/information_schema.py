@@ -147,3 +147,28 @@ def default_value(pg_cur: cursor, table_schema: str, table_name: str, column: st
                 col=column)
     pg_cur.execute(sql)
     return pg_cur.fetchone()[0] or 'NULL'
+
+
+def geometry_type(pg_cur: cursor, table_schema: str, table_name: str, column: str) -> tuple:
+    """
+    Returns the geometry type of a column
+    :param pg_cur:
+    :param table_schema:
+    :param table_name:
+    :param column:
+    :return: a tuple (type, srid)
+    """
+    sql = "SELECT type, srid " \
+          "FROM geometry_columns " \
+          "WHERE f_table_schema = '{s}' " \
+          "AND f_table_name = '{t}' " \
+          "AND f_geometry_column = '{c}';".format(s=table_schema,
+                                                  t=table_name,
+                                                  c=column)
+    pg_cur.execute(sql)
+    res = pg_cur.fetchone()
+    if res:
+        return res[0], res[1]
+    else:
+        return None
+

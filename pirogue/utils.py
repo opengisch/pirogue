@@ -68,6 +68,7 @@ def select_columns(pg_cur: cursor,
                    table_alias: str = None,
                    remove_pkey: bool = False,
                    skip_columns: list = [],
+                   safe_skip_columns: list = [],
                    columns_list: list = None,
                    comment_skipped: bool = True,
                    remap_columns: dict = {},
@@ -83,7 +84,8 @@ def select_columns(pg_cur: cursor,
     :param table_type: the type of table, i.e. view or table
     :param table_alias: if not specified, table is used
     :param remove_pkey: if True, the primary is removed from the list
-    :param skip_columns: list of columns to be skipped
+    :param skip_columns: list of columns to be skipped, raise an exception if the column does not exist
+    :param safe_skip_columns: list of columns to be skipped, do not raise exception if column does not exist
     :param columns_list: if given use as list of columns
     :param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
     If remove_pkey is True, the primary key will not be printed
@@ -100,6 +102,7 @@ def select_columns(pg_cur: cursor,
                                           table_type=table_type,
                                           remove_pkey=remove_pkey),
                   key=lambda col: __column_priority(col))
+    cols=[col for col in cols if col not in safe_skip_columns]
 
     # check arguments
     for param, dict_or_list in {'skip_columns': skip_columns,

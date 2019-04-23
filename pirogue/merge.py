@@ -5,7 +5,7 @@ import psycopg2
 import psycopg2.extras
 
 from pirogue.utils import table_parts, select_columns, insert_command, update_command
-from pirogue.information_schema import TableHasNoPrimaryKey, reference_columns, primary_key
+from pirogue.information_schema import TableHasNoPrimaryKey, reference_columns, primary_key, columns, geometry_type
 
 
 class ReferencedTableDefinedBeforeReferencing(Exception):
@@ -61,7 +61,8 @@ class Merge:
                            'type_name', 'joins',
                            'insert_trigger', 'update_trigger',
                            'allow_type_change', 'allow_parent_only',
-                           'additional_columns', 'additional_joins'):
+                           'additional_columns', 'additional_joins',
+                           'merge_columns', 'merge_geometry_columns'):
                 raise InvalidDefinition('key {k} is not a valid'.format(k=key))
         # check joins validity
         for alias, table_def in definition['joins'].items():
@@ -120,6 +121,20 @@ class Merge:
             except TableHasNoPrimaryKey:
                 table_def['pkey'] = table_def['ref_master_key']
 
+        # pre-process merged columns
+        self.merge_column_cast = {}
+        # for geometry columns, we need to get the type to cast the NULL value
+        merge_geometry_columns = definition.get('merge_geometry_columns', [])
+        for col in merge_geometry_columns:
+            for table_def in self.joins.values():
+                gt = geometry_type(self.cursor, table_def['table_schema'], table_def['table_name'], col)
+                if gt:
+                    self.merge_column_cast[col] = '::geometry({type},{srid})'.format(type=gt[0],srid=gt[1])
+                    break
+            if col not in self.merge_column_cast:
+                raise InvalidDefinition('There is no geometry column "{col}" in joined tables'.format(col=col))
+        self.merge_columns = definition.get('merge_columns', []) + merge_geometry_columns
+
     def create(self) -> bool:
         """
 
@@ -161,7 +176,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
       {types}
       ELSE {no_subtype}
     END AS {type_name},
-    {master_columns},
+    {master_columns},{merge_columns}
     {joined_columns}{additional_columns}
   FROM {mt}.{ms} {sa}
     {joined_tables}{additional_joins};        
@@ -178,15 +193,31 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                          prefix=self.master_prefix,
                                          remap_columns=self.master_remap_columns,
                                          indent=4),
-           joined_columns=', '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
-                                                    table_alias=table_def['short_alias'],
-                                                    skip_columns=table_def.get('skip_columns', [])+[table_def['ref_master_key']],
-                                                    prefix=table_def.get('prefix', None),
-                                                    remove_pkey=False,
-                                                    remap_columns=table_def.get('remap_columns', {}),
-                                                    indent=4)
-                                     for alias, table_def in self.joins.items()]),
-           additional_columns=''.join([',\n    {cdef} AS {alias}'.format(cdef=cdef,alias=alias) for alias, cdef in self.additional_columns.items()]),
+           merge_columns='\n      '.join(['\n    CASE'
+                                          '\n      {conditions}'
+                                          '\n      ELSE NULL{cast}'
+                                          '\n    END AS {col},'
+                                          .format(col=col,
+                                                  conditions='\n      '.join(['WHEN {ta}.{rmk} IS NOT NULL THEN {ta}.{col}'
+                                                              .format(ta=table_def['short_alias'],
+                                                                      rmk=table_def['ref_master_key'],
+                                                                      col=col)
+                                                              for alias, table_def in self.joins.items()
+                                                              if col in columns(self.cursor, table_def['table_schema'], table_def['table_name'], skip_columns=table_def.get('skip_columns', []))]),
+                                                  cast=self.merge_column_cast.get(col, '')
+                                                  )
+                                          for col in self.merge_columns]),
+           joined_columns=',\n    '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
+                                                     table_alias=table_def['short_alias'],
+                                                     skip_columns=table_def.get('skip_columns', [])+[table_def['ref_master_key']],
+                                                     safe_skip_columns=self.merge_columns,
+                                                     prefix=table_def.get('prefix', None),
+                                                     remove_pkey=False,
+                                                     remap_columns=table_def.get('remap_columns', {}),
+                                                     indent=4)
+                                      for alias, table_def in self.joins.items()]),
+           additional_columns=''.join([',\n    {cdef} AS {alias}'.format(cdef=cdef,alias=alias)
+                                       for alias, cdef in self.additional_columns.items()]),
            mt=self.master_schema,
            ms=self.master_table,
            sa=self.short_alias,
