@@ -168,7 +168,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
            types='\n      '.join(["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::text"
                                  .format(shal=table_def['short_alias'], mrf=table_def['ref_master_key'], al=alias)
                                   for alias, table_def in self.joins.items()]),
-           no_subtype="{type}''::text".format(self.view_alias if self.allow_parent_only else 'unknown'),
+           no_subtype="'{type}'::text".format(type=self.view_alias if self.allow_parent_only else 'unknown'),
            type_name=self.type_name,
            master_columns=select_columns(self.cursor, self.master_schema, self.master_table,
                                          table_alias=self.view_alias,
