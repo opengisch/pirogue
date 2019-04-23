@@ -66,7 +66,7 @@ def select_columns(pg_cur: cursor,
                    table_name: str,
                    table_type: str = 'table',
                    table_alias: str = None,
-                   remove_pkey: bool = True,
+                   remove_pkey: bool = False,
                    skip_columns: list = [],
                    columns_list: list = None,
                    comment_skipped: bool = True,
@@ -120,13 +120,14 @@ def select_columns(pg_cur: cursor,
                       col_alias=column_alias(col, remap_columns=remap_columns, prefix=prefix, prepend_as=True))
                for col in cols if (comment_skipped or col not in skip_columns)])
 
+
 def insert_command(pg_cur: cursor,
                    table_schema: str,
                    table_name: str,
                    table_type: str = 'table',
                    table_alias: str = None,
                    remove_pkey: bool = True,
-                   coalesce_pkey: bool = False,
+                   coalesce_pkey_default: bool = False,
                    skip_columns: list = [],
                    comment_skipped: bool = True,
                    remap_columns: dict = {},
@@ -144,7 +145,7 @@ def insert_command(pg_cur: cursor,
     :param table_type: the type of table, i.e. view or table
     :param table_alias: the alias of the table
     :param remove_pkey: if True, the primary is removed from the list
-    :param coalesce_pkey: if True, the following expression is used to insert the primary key: COALESCE( NEW.{pkey}, {default_value} )
+    :param coalesce_pkey_default: if True, the following expression is used to insert the primary key: COALESCE( NEW.{pkey}, {default_value} )
     :param skip_columns: list of columns to be skipped
     :param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
     :param remap_columns: dictionary to remap columns
@@ -164,7 +165,9 @@ def insert_command(pg_cur: cursor,
                           remove_pkey=remove_pkey),
                   key=lambda col: __column_priority(col))
 
-    pkey = primary_key(pg_cur, table_schema, table_name) if table_type=='table' else ''
+    pkey = None
+    if coalesce_pkey_default:
+        pkey = primary_key(pg_cur, table_schema, table_name)
 
     # check arguments
     for param, dict_or_list in {'skip_columns': skip_columns,
@@ -180,9 +183,8 @@ def insert_command(pg_cur: cursor,
     def value(col):
         if col in insert_values:
             return '{val} -- {ori_col}'.format(val=insert_values[col], ori_col=col)
-        cal = column_alias(col, remap_columns=remap_columns,
-                                                       prefix=prefix, field_if_no_alias=True)
-        if col == pkey and coalesce_pkey:
+        cal = column_alias(col, remap_columns=remap_columns, prefix=prefix, field_if_no_alias=True)
+        if coalesce_pkey_default and col == pkey:
             return 'COALESCE( NEW.{cal}, {pk_def} )'.format(cal=cal,
                                                             pk_def=default_value(pg_cur, table_schema, table_name, pkey))
         else:
@@ -221,7 +223,8 @@ def update_command(pg_cur: cursor,
                    table_name: str,
                    table_alias: str=None,
                    table_type: str = 'table',
-                   update_pkey: bool = False,
+                   remove_pkey: bool = True,
+                   pkey: str = None,
                    skip_columns: list=[],
                    comment_skipped: bool = True,
                    remap_columns: dict = {},
@@ -237,7 +240,8 @@ def update_command(pg_cur: cursor,
     :param table_schema: the schema
     :param table_name: the name of the table
     :param table_type: the type of table, i.e. view or table
-    :param update_pkey: if True, the primary key will also be updated
+    :param remove_pkey: if True, the primary key will also be updated
+    :param pkey: can be manually specified.
     :param table_alias: if not specified, table is used
     :param skip_columns: list of columns to be skipped
     :param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
@@ -255,10 +259,14 @@ def update_command(pg_cur: cursor,
                           table_schema=table_schema,
                           table_name=table_name,
                           table_type=table_type,
-                          remove_pkey=not update_pkey and table_type != 'view'),
-                  key=lambda col: __column_priority(col))
+                          remove_pkey=remove_pkey and pkey is None),
+                  key=lambda _col: __column_priority(_col))
 
-    pkey = '' if where_clause else primary_key(pg_cur, table_schema, table_name)
+    if pkey and remove_pkey:
+        cols.remove(pkey)
+
+    if not pkey and not where_clause:
+        pkey = primary_key(pg_cur, table_schema, table_name)
 
     # check arguments
     for param, dict_or_list in {'skip_columns': skip_columns,

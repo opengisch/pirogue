@@ -4,7 +4,7 @@ import unittest
 import yaml
 import psycopg2
 import psycopg2.extras
-from pirogue.merge import Merge
+from pirogue.merge import Merge, InvalidDefinition
 
 pg_service = 'pirogue_test'
 
@@ -18,35 +18,52 @@ class TestMerge(unittest.TestCase):
     def tearDown(self):
         self.conn.close()
 
-    def test_simple(self):
+    def test_insert_update_delete(self):
         yaml_definition = yaml.safe_load(open("test/merge_simple.yaml"))
         Merge(yaml_definition, pg_service=pg_service).create()
 
-    def test_sql_definition(self):
-        yaml_definition = yaml.safe_load(open("test/merge_sql_def.yaml"))
+        # insert
+        self.cur.execute("INSERT INTO pirogue_test.vw_merge_animal (animal_type,name,year,fk_cat_breed,eye_color) VALUES ('cat','felix',1985,2,'black');")
+        self.cur.execute("SELECT animal_type, year, fk_cat_breed FROM pirogue_test.vw_merge_animal WHERE name = 'felix';")
+        res = self.cur.fetchone()
+        self.assertEqual(res[0], 'cat')
+        self.assertEqual(res[1], 1985)
+        self.assertEqual(res[2], 2)
+        # update
+        self.cur.execute("SELECT * FROM pirogue_test.cat WHERE eye_color = 'black';")
+        self.assertIsNotNone(self.cur.fetchone())
+        self.cur.execute("UPDATE pirogue_test.vw_merge_animal SET animal_type = 'dog' WHERE name = 'felix';")
+        self.cur.execute("SELECT * FROM pirogue_test.cat WHERE eye_color = 'black';")
+        self.assertIsNone(self.cur.fetchone())
+        # delete
+        self.cur.execute("SELECT * FROM pirogue_test.vw_merge_animal WHERE name = 'felix';")
+        self.assertIsNotNone(self.cur.fetchone())
+        self.cur.execute("DELETE FROM pirogue_test.vw_merge_animal WHERE name = 'felix';")
+        self.cur.execute("SELECT * FROM pirogue_test.vw_merge_animal WHERE name = 'felix';")
+        self.assertIsNone(self.cur.fetchone())
+
+    def test_type_change_not_allowed(self):
+        yaml_definition = yaml.safe_load(open("test/merge_simple.yaml"))
+        yaml_definition['view_name'] = 'vw_animal_no_type_change'
+        yaml_definition['allow_type_change'] = False
         Merge(yaml_definition, pg_service=pg_service).create()
+        self.cur.execute("INSERT INTO pirogue_test.vw_animal_no_type_change (animal_type,name,year,fk_cat_breed,eye_color) VALUES ('dog','albert',1933,2,'yellow');")
+        error_caught = False
+        try:
+            self.cur.execute("UPDATE pirogue_test.vw_animal_no_type_change SET animal_type = 'cat';")
+        except psycopg2.errors.RaiseException:
+            error_caught = True
+        self.assertTrue(error_caught)
 
-    def test_custom_order(self):
-        yaml_definition = yaml.safe_load(open("test/merge_columns_order.yaml"))
-        Merge(yaml_definition, pg_service=pg_service).create()
-
-        check_columns = """
-            select c.column_name
-            from information_schema.tables t
-                left join information_schema.columns c
-                          on t.table_schema = c.table_schema
-                          and t.table_name = c.table_name
-            where table_type = 'VIEW'
-                  and t.table_schema = 'pirogue_test'
-                  and t.table_name = 'ordered_view'
-            order by ordinal_position;
-        """
-        self.cur.execute(check_columns)
-        cols = self.cur.fetchall()
-        self.assertEqual(cols[0][0], 'my_custom_type', 'Custom type is failing')
-        self.assertEqual(cols[1][0], 'eye_color_renamed', 'Columns on top is failing')
-        self.assertEqual(cols[-1][0], 'dog_fk_breed', 'Columns on top is failing')
-
+    def test_invalid_definition(self):
+        yaml_definition = yaml.safe_load(open("test/merge_simple.yaml"))
+        yaml_definition['MyBadKey'] = 'Ouch'
+        error_caught = False
+        try:
+            Merge(yaml_definition, pg_service=pg_service).create()
+        except InvalidDefinition:
+            error_caught = True
+            self.assertTrue(error_caught)
 
 
 if __name__ == '__main__':
