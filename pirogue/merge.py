@@ -4,9 +4,8 @@ import os
 import psycopg2
 import psycopg2.extras
 
-from pirogue.utils import table_parts, column_alias, select_columns, insert_command, update_command
-from pirogue.information_schema import TableHasNoPrimaryKey, NoReferenceFound, \
-    columns, reference_columns, primary_key, default_value
+from pirogue.utils import table_parts, select_columns, insert_command, update_command
+from pirogue.information_schema import TableHasNoPrimaryKey, reference_columns, primary_key
 
 
 class ReferencedTableDefinedBeforeReferencing(Exception):
@@ -61,7 +60,8 @@ class Merge:
                            'view_name', 'alias', 'short_alias',
                            'type_name', 'joins',
                            'insert_trigger', 'update_trigger',
-                           'allow_type_change', 'allow_parent_only'):
+                           'allow_type_change', 'allow_parent_only',
+                           'additional_columns', 'additional_joins'):
                 raise InvalidDefinition('key {k} is not a valid'.format(k=key))
         # check joins validity
         for alias, table_def in definition['joins'].items():
@@ -92,8 +92,10 @@ class Merge:
         self.type_name = definition.get('type_name', '{al}_type'.format(al=self.view_alias))
         self.insert_trigger = definition.get('insert_trigger', {})
         self.update_trigger = definition.get('update_trigger', {})
-        self.allow_parent_only = definition.get('allow_parent_only', False)
+        self.allow_parent_only = definition.get('allow_parent_only', True)
         self.allow_type_change = definition.get('allow_type_change', True)
+        self.additional_joins = definition.get('additional_joins', None)
+        self.additional_columns = definition.get('additional_columns', {})
 
         try:
             self.master_pkey = primary_key(self.cursor, self.master_schema, self.master_table)
@@ -160,9 +162,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
       ELSE {no_subtype}
     END AS {type_name},
     {master_columns},
-    {joined_columns}
+    {joined_columns}{additional_columns}
   FROM {mt}.{ms} {sa}
-    {joined_tables};        
+    {joined_tables}{additional_joins};        
 """.format(vs=self.view_schema,
            vn=self.view_name,
            types='\n      '.join(["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::text"
@@ -184,6 +186,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                     remap_columns=table_def.get('remap_columns', {}),
                                                     indent=4)
                                      for alias, table_def in self.joins.items()]),
+           additional_columns=''.join([',\n    {cdef} AS {alias}'.format(cdef=cdef,alias=alias) for alias, cdef in self.additional_columns.items()]),
            mt=self.master_schema,
            ms=self.master_table,
            sa=self.short_alias,
@@ -193,8 +196,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                     rmk=table_def['ref_master_key'],
                                                     msa=self.short_alias,
                                                     mpk=self.master_pkey)
-                                            for table_def in self.joins.values()])
-            )
+                                            for table_def in self.joins.values()]),
+           additional_joins='\n    {ad}'.format(ad=self.additional_joins) if self.additional_joins else ''
+           )
         return sql
 
     def __insert_trigger(self) -> str:
