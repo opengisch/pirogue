@@ -131,18 +131,10 @@ class Merge:
         :return:
         """
 
-        create_joins_sql = []
-        if self.create_joins:
-            for alias, table_def in self.joins.items():
-                create_joins_sql.append(Join(pg_service=self.pg_service,
-                                             parent_table='{s}.{t}'.format(s=self.master_schema, t=self.master_table),
-                                             child_table='{s}.{t}'.format(s=table_def['table_schema'], t=table_def['table_name'])
-                                             ))
-
         for sql in [self.__view(),
                     self.__insert_trigger(),
                     self.__update_trigger(),
-                    self.__delete_trigger()] + create_joins_sql:
+                    self.__delete_trigger()]:
             try:
                 if self.variables:
                     self.cursor.execute(sql, self.variables)
@@ -160,6 +152,13 @@ class Merge:
                 raise e
         self.conn.commit()
         self.conn.close()
+
+        if self.create_joins:
+            for alias, table_def in self.joins.items():
+                Join(pg_service=self.pg_service,
+                     parent_table='{s}.{t}'.format(s=self.master_schema, t=self.master_table),
+                     child_table='{s}.{t}'.format(s=table_def['table_schema'], t=table_def['table_name'])
+                ).create()
         return True
 
     def __view(self) -> str:
