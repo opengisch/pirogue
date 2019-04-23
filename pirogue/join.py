@@ -4,14 +4,8 @@ import os
 import psycopg2
 import psycopg2.extras
 
-from enum import Enum
-
 from pirogue.utils import table_parts, select_columns, insert_command, update_command
-from pirogue.information_schema import TableHasNoPrimaryKey, reference_columns, primary_key
-
-
-def update_columns(columns: list, sep:str=', ') -> str:
-    return sep.join(["{c} = NEW.{c}".format(c=col) for col in columns])
+from pirogue.information_schema import TableHasNoPrimaryKey, reference_columns, primary_key, default_value
 
 
 class Join:
@@ -20,9 +14,10 @@ class Join:
     """
 
     def __init__(self, parent_table: str, child_table: str,
-                 pg_service: str=None,
-                 view_schema: str=None,
-                 view_name: str=None):
+                 pg_service: str = None,
+                 view_schema: str = None,
+                 view_name: str = None,
+                 pkey_default_value: bool = False):
         """
         Produces the SQL code of the join table and triggers
         :param pg_service:
@@ -30,12 +25,15 @@ class Join:
         :param child_table:
         :param view_schema: the schema where the view will written to
         :param view_name: the name of the created view, defaults to vw_{parent_table}_{join_table}
+        :param : The primary key column of the view will have a default value according to the child primary key table
         """
 
         if pg_service is None:
             pg_service = os.getenv('PGSERVICE')
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cursor = self.conn.cursor()
+
+        self.pkey_default_value = pkey_default_value
 
         (self.parent_schema, self.parent_table) = table_parts(parent_table)
         (self.child_schema, self.child_table) = table_parts(child_table)
@@ -69,10 +67,12 @@ class Join:
         for sql in [self.__view(),
                     self.__insert_trigger(),
                     self.__update_trigger(),
-                    self.__delete_trigger()
+                    self.__delete_trigger(),
+                    self.__extras()
                     ]:
             try:
-                self.cursor.execute(sql)
+                if sql:
+                    self.cursor.execute(sql)
             except psycopg2.Error as e:
                 print("*** Failing:\n{}\n***".format(sql))
                 raise e
@@ -87,14 +87,14 @@ class Join:
         """
         sql = """
 CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
-  {parent_cols},
-  {child_cols}
+  {child_cols},
+  {parent_cols}
   FROM {cs}.{ct}
   LEFT JOIN {ps}.{pt} ON {pt}.{prk} = {ct}.{rpk};
 """.format(vs=self.view_schema,
            vn=self.view_name,
-           parent_cols=select_columns(self.cursor, self.parent_schema, self.parent_table, table_alias=self.parent_table),
-           child_cols=select_columns(self.cursor, self.child_schema, self.child_table, table_alias=self.child_table, skip_columns=[self.ref_parent_key], ),
+           parent_cols=select_columns(self.cursor, self.parent_schema, self.parent_table, table_alias=self.parent_table, remove_pkey=True),
+           child_cols=select_columns(self.cursor, self.child_schema, self.child_table, table_alias=self.child_table),
            cs=self.child_schema,
            ct=self.child_table,
            ps=self.parent_schema,
@@ -192,4 +192,15 @@ CREATE TRIGGER tr_{vn}_on_delete
            ppk=self.parent_pkey,
            ps=self.parent_schema,
            pt=self.parent_table)
+        return sql
+
+
+    def __extras(self):
+        sql = ''
+        if self.pkey_default_value:
+            sql += "ALTER VIEW {vs}.{vn} ALTER {pk} SET DEFAULT {dv};"\
+                .format(vs=self.view_schema,
+                        vn=self.view_name,
+                        pk=self.parent_pkey,
+                        dv=default_value(self.cursor, self.child_schema, self.child_table, self.ref_parent_key))
         return sql

@@ -26,7 +26,9 @@ if __name__ == "__main__":
     join_parser.add_argument('child_table')
     join_parser.add_argument('-s', '--view-schema', help='schema for the created join view')
     join_parser.add_argument('-v', '--view-name', help='name for the created join view')
-    join_parser.add_argument('-t', '--join-type', help='the type of join: LEFT (default), RIGHT, FULL or INNER.')
+    join_parser.add_argument('-d', '--pkey-default-value', action='store_true',
+                             help='The primary key column of the view will have a default value'
+                                  ' according to the child primary key table')
 
     # merge view
     merger_parser = subparsers.add_parser('merge', help='create a merge view')
@@ -61,7 +63,8 @@ if __name__ == "__main__":
         success = Join(args.parent_table, args.child_table,
                        pg_service=pg_service,
                        view_schema=args.view_schema,
-                       view_name=args.view_name).create()
+                       view_name=args.view_name,
+                       pkey_default_value=args.pkey_default_value).create()
         if not success:
             exit_val = 1
 
