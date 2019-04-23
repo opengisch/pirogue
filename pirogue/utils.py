@@ -254,12 +254,14 @@ def update_command(pg_cur: cursor,
     :param indent: add an indent in front
     :return: the SQL command
     """
+
+    remove_pkey = remove_pkey and pkey is None and where_clause is None
     # get columns
     cols = sorted(columns(pg_cur,
                           table_schema=table_schema,
                           table_name=table_name,
                           table_type=table_type,
-                          remove_pkey=remove_pkey and pkey is None and where_clause is None),
+                          remove_pkey=remove_pkey),
                   key=lambda _col: __column_priority(_col))
 
     if pkey and remove_pkey:
@@ -307,10 +309,6 @@ def update_command(pg_cur: cursor,
                                                                                                                                  remap_columns=remap_columns,
                                                                                                                                  prefix=prefix,
                                                                                                                                  field_if_no_alias=True)))))
-
-
-def update_columns(columns: list, sep:str=', ') -> str:
-    return sep.join(["{c} = NEW.{c}".format(c=col) for col in columns])
 
 
 def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[]) -> int:

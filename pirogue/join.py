@@ -6,8 +6,12 @@ import psycopg2.extras
 
 from enum import Enum
 
-from pirogue.utils import table_parts, list2str, update_columns
+from pirogue.utils import table_parts, list2str
 from pirogue.information_schema import TableHasNoPrimaryKey, columns, reference_columns, primary_key, default_value
+
+
+def update_columns(columns: list, sep:str=', ') -> str:
+    return sep.join(["{c} = NEW.{c}".format(c=col) for col in columns])
 
 
 class JoinType(Enum):
