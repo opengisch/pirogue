@@ -132,12 +132,11 @@ CREATE TRIGGER tr_{vn}_on_insert
            insert_parent=insert_command(self.cursor, self.parent_schema, self.parent_table,
                                         remove_pkey=False,
                                         coalesce_pkey_default=True,
-                                        returning='{prk} INTO NEW.{prk}'.format(prk=self.parent_pkey)),
+                                        remap_columns={self.parent_pkey: self.ref_parent_key},
+                                        returning='{ppk} INTO NEW.{prk}'.format(ppk=self.parent_pkey, prk=self.ref_parent_key)),
            insert_child=insert_command(self.cursor, self.child_schema, self.child_table,
                                        remove_pkey=False,
-                                       coalesce_pkey_default=True,
-                                       pkey=self.child_pkey,
-                                       insert_values={self.ref_parent_key: 'NEW.{c}'.format(c=self.parent_pkey)})
+                                       pkey=self.child_pkey)
            )
         return sql
 
@@ -162,8 +161,9 @@ CREATE TRIGGER tr_{vn}_on_update
   FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_update();
 """.format(vs=self.view_schema,
            vn=self.view_name,
-           update_master=update_command(self.cursor, self.parent_schema, self.parent_table),
-           update_child=update_command(self.cursor, self.child_schema, self.child_table, pkey=self.child_pkey, remove_pkey=False, update_values={self.ref_parent_key: 'OLD.{c}'.format(c=self.parent_pkey)})
+           update_master=update_command(self.cursor, self.parent_schema, self.parent_table,
+                                        remap_columns={self.parent_pkey: self.ref_parent_key}),
+           update_child=update_command(self.cursor, self.child_schema, self.child_table, pkey=self.child_pkey, remove_pkey=False)
            )
         return sql
 
@@ -172,8 +172,8 @@ CREATE TRIGGER tr_{vn}_on_update
 CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_delete() RETURNS trigger AS
 $BODY$
 BEGIN
-  DELETE FROM {cs}.{ct} WHERE {rpk} = OLD.{ppk};
-  DELETE FROM {ps}.{pt} WHERE {ppk} = OLD.{ppk};
+  DELETE FROM {cs}.{ct} WHERE {rpk} = OLD.{rpk};
+  DELETE FROM {ps}.{pt} WHERE {ppk} = OLD.{rpk};
 RETURN NULL;
 END;
 $BODY$
@@ -194,13 +194,12 @@ CREATE TRIGGER tr_{vn}_on_delete
            pt=self.parent_table)
         return sql
 
-
     def __extras(self):
         sql = ''
         if self.pkey_default_value:
-            sql += "ALTER VIEW {vs}.{vn} ALTER {pk} SET DEFAULT {dv};"\
+            sql += "ALTER VIEW {vs}.{vn} ALTER {rpk} SET DEFAULT {dv};"\
                 .format(vs=self.view_schema,
                         vn=self.view_name,
-                        pk=self.parent_pkey,
-                        dv=default_value(self.cursor, self.child_schema, self.child_table, self.ref_parent_key))
+                        rpk=self.child_pkey,
+                        dv=default_value(self.cursor, self.child_schema, self.child_table, self.child_pkey))
         return sql

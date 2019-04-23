@@ -10,14 +10,14 @@ export PGSERVICE=pirogue_test
 
 ${DIR}/../scripts/pirogue join pirogue_test.animal pirogue_test.cat
 ${DIR}/../scripts/pirogue join pirogue_test.animal pirogue_test.aardvark --view-name vw_aardvark
-${DIR}/../scripts/pirogue join pirogue_test.animal pirogue_test.eagle
+${DIR}/../scripts/pirogue join pirogue_test.animal pirogue_test.eagle --pkey-default-value
 ERROR=0
 
 PSQL_ARGS="--tuples-only --no-align --field-separator @"
 
 echo "test simple insert"
-psql --quiet -v ON_ERROR_STOP="on" -c "INSERT into pirogue_test.vw_animal_cat (aid, fk_breed, eye_color, name, year) VALUES (12345, '1', 'yellow', 'ninja', 1934);"
-RESULT=$(psql ${PSQL_ARGS} -c "SELECT aid,fk_breed,eye_color,name,year FROM pirogue_test.vw_animal_cat")
+psql --quiet -v ON_ERROR_STOP="on" -c "INSERT into pirogue_test.vw_animal_cat (cid, fk_breed, eye_color, name, year) VALUES (12345, '1', 'yellow', 'ninja', 1934);"
+RESULT=$(psql ${PSQL_ARGS} -c "SELECT cid,fk_breed,eye_color,name,year FROM pirogue_test.vw_animal_cat")
 EXPECTED=12345@1@yellow@ninja@1934
 if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
 
@@ -35,7 +35,7 @@ if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expect
 
 echo "test insert without pkey value (getting default from parent table)"
 psql --quiet -v ON_ERROR_STOP="on" -c "INSERT into pirogue_test.vw_animal_cat (fk_breed, eye_color, name, year) VALUES ('1', 'yellow', 'ninja', 1934);"
-RESULT=$(psql ${PSQL_ARGS} -c "SELECT aid FROM pirogue_test.vw_animal_cat")
+RESULT=$(psql ${PSQL_ARGS} -c "SELECT cid FROM pirogue_test.vw_animal_cat")
 EXPECTED=1101
 if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
 
