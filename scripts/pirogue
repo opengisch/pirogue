@@ -31,6 +31,8 @@ if __name__ == "__main__":
     # merge view
     merger_parser = subparsers.add_parser('merge', help='create a merge view')
     merger_parser.add_argument('definition_file', help='YAML definition of the merge view', type=argparse.FileType('r'))
+    merger_parser.add_argument('-j', '--create-joins', action='store_true',
+                               help='Create simple join view for all joined tables.')
     merger_parser.add_argument('-v', '--var', nargs=3,
                                help='Assign variable for running SQL deltas. '
                                     'Format is: (string|float|int) name value. ',
@@ -73,6 +75,6 @@ if __name__ == "__main__":
                 variables[v[1]] = int(v[2])
             else:
                 variables[v[1]] = v[2]
-        Merge(yaml_definition, variables=variables).create()
+        Merge(yaml_definition, variables=variables, create_joins=args.create_joins).create()
 
     exit(exit_val)

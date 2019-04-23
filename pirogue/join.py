@@ -6,8 +6,8 @@ import psycopg2.extras
 
 from enum import Enum
 
-from pirogue.utils import table_parts, list2str, select_columns, insert_command, update_command
-from pirogue.information_schema import TableHasNoPrimaryKey, columns, reference_columns, primary_key, default_value
+from pirogue.utils import table_parts, select_columns, insert_command, update_command
+from pirogue.information_schema import TableHasNoPrimaryKey, reference_columns, primary_key
 
 
 def update_columns(columns: list, sep:str=', ') -> str:

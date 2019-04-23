@@ -6,7 +6,7 @@ import psycopg2.extras
 
 from pirogue.utils import table_parts, select_columns, insert_command, update_command
 from pirogue.information_schema import TableHasNoPrimaryKey, reference_columns, primary_key, columns, geometry_type
-
+from pirogue.join import Join
 
 class ReferencedTableDefinedBeforeReferencing(Exception):
     pass
@@ -18,40 +18,30 @@ class VariableError(Exception):
     pass
 
 
-class TableDef(object):
-    table_schema = ''
-    table_name = ''
-    table_type = 'table'
-    table_alias = None
-    pkey = None  # determined automatically if not provided
-    skip_columns = []
-    comment_skipped = True
-    remap_columns = {}
-    prefix: str = None
-
-    def __init__(self, table_schema: str, table_name: str):
-        self.table_schema = table_schema
-        self.table_name = table_name
-
-
 class Merge:
     """
     Creates a merge view with associated triggers to edit.
     """
 
-    def __init__(self, definition: dict, pg_service: str = None, variables: dict = {}):
+    def __init__(self, definition: dict,
+                 pg_service: str = None,
+                 variables: dict = {},
+                 create_joins: bool = False):
         """
         Produces the SQL code of the join table and triggers
         :param definition: the YAML definition of the merge view
-        :param pg_service:
+        :param pg_service: if not given, it is determined using environment variable PGSERVICE
         :param variables: dictionary for variables to be used in SQL deltas ( name => value )
+        :param create_joins: if True, simple joins will be created for all joined tables
         """
 
         self.variables = variables
+        self.create_joins = create_joins
 
-        if pg_service is None:
-            pg_service = os.getenv('PGSERVICE')
-        self.conn = psycopg2.connect("service={0}".format(pg_service))
+        self.pg_service = pg_service
+        if self.pg_service is None:
+            self.pg_service = os.getenv('PGSERVICE')
+        self.conn = psycopg2.connect("service={0}".format(self.pg_service))
         self.cursor = self.conn.cursor()
 
         # check definition validity
@@ -141,10 +131,18 @@ class Merge:
         :return:
         """
 
+        create_joins_sql = []
+        if self.create_joins:
+            for alias, table_def in self.joins.items():
+                create_joins_sql.append(Join(pg_service=self.pg_service,
+                                             parent_table='{s}.{t}'.format(s=self.master_schema, t=self.master_table),
+                                             child_table='{s}.{t}'.format(s=table_def['table_schema'], t=table_def['table_name'])
+                                             ))
+
         for sql in [self.__view(),
                     self.__insert_trigger(),
                     self.__update_trigger(),
-                    self.__delete_trigger()]:
+                    self.__delete_trigger()] + create_joins_sql:
             try:
                 if self.variables:
                     self.cursor.execute(sql, self.variables)

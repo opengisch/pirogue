@@ -21,46 +21,6 @@ def table_parts(name: str) -> (str, str):
         return 'public', name
 
 
-def list2str(elements: list, sep: str= ', ', prepend: str='', append: str='', prepend_to_list: str='') -> str:
-    """
-    Prepend to all strings in the list
-    :param elements:
-    :param sep: separator
-    :param prepend:
-    :param append:
-    :param prepend_to_list: prepend to the return string, if elements is not None or empty
-    :return:
-    """
-    if elements is None or len(elements) == 0:
-        return ''
-    return prepend_to_list + sep.join([prepend+x+append for x in elements])
-
-
-def column_alias(column: str,
-                 remap_columns: dict = {},
-                 prefix: str= None,
-                 field_if_no_alias: bool = False,
-                 prepend_as: bool = False) -> list:
-    """
-
-    :param table_alias:
-    :param column:
-    :param field_if_no_alias: if True, return the field if the alias doesn't exist. If False return an empty string
-    :param prepend_as: prepend " AS " to the alias
-    :return: empty string if there is no alias and (i.e = field name)
-    """
-    col_alias = ''
-    if column in remap_columns:
-        col_alias = remap_columns[column]
-    elif prefix:
-        col_alias = prefix + column
-    elif field_if_no_alias:
-        col_alias = column
-    if prepend_as and col_alias:
-        col_alias = ' AS {al}'.format(al=col_alias)
-    return col_alias
-
-
 def select_columns(pg_cur: cursor,
                    table_schema: str,
                    table_name: str,
@@ -120,7 +80,7 @@ def select_columns(pg_cur: cursor,
               .format(skip='-- ' if col in skip_columns else '',
                       table_alias=table_alias or table_name,
                       column=col,
-                      col_alias=column_alias(col, remap_columns=remap_columns, prefix=prefix, prepend_as=True))
+                      col_alias=__column_alias(col, remap_columns=remap_columns, prefix=prefix, prepend_as=True))
                for col in cols if (comment_skipped or col not in skip_columns)])
 
 
@@ -175,7 +135,7 @@ def insert_command(pg_cur: cursor,
     if pkey and remove_pkey:
         cols.remove(pkey)
 
-    if not pkey and not coalesce_pkey_default:
+    if not pkey and coalesce_pkey_default:
         pkey = primary_key(pg_cur, table_schema, table_name)
 
     # check arguments
@@ -192,7 +152,7 @@ def insert_command(pg_cur: cursor,
     def value(col):
         if col in insert_values:
             return '{val} -- {ori_col}'.format(val=insert_values[col], ori_col=col)
-        cal = column_alias(col, remap_columns=remap_columns, prefix=prefix, field_if_no_alias=True)
+        cal = __column_alias(col, remap_columns=remap_columns, prefix=prefix, field_if_no_alias=True)
         if coalesce_pkey_default and col == pkey:
             return 'COALESCE( NEW.{cal}, {pk_def} )'.format(cal=cal,
                                                             pk_def=default_value(pg_cur, table_schema, table_name, pkey))
@@ -307,17 +267,42 @@ def update_command(pg_cur: cursor,
                                         comma=', ' if __print_comma(next_comma_printed, col in skip_columns) else '',
                                         col=col,
                                         new_col=update_values.get(col,
-                                                                  'NEW.{cal}'.format(cal=column_alias(col,
-                                                                                                      remap_columns=remap_columns,
-                                                                                                      prefix=prefix,
-                                                                                                      field_if_no_alias=True))))
+                                                                  'NEW.{cal}'.format(cal=__column_alias(col,
+                                                                                                        remap_columns=remap_columns,
+                                                                                                        prefix=prefix,
+                                                                                                        field_if_no_alias=True))))
                                 for col in cols if (comment_skipped or col not in skip_columns)]),
                 where_clause=where_clause or '{pkey} = {pkal}'.format(pkey=pkey,
                                                                       pkal=update_values.get(pkey,
-                                                                                             'OLD.{cal}'.format(cal=column_alias(pkey,
-                                                                                                                                 remap_columns=remap_columns,
-                                                                                                                                 prefix=prefix,
-                                                                                                                                 field_if_no_alias=True)))))
+                                                                                             'OLD.{cal}'.format(cal=__column_alias(pkey,
+                                                                                                                                   remap_columns=remap_columns,
+                                                                                                                                   prefix=prefix,
+                                                                                                                                   field_if_no_alias=True)))))
+
+
+def __column_alias(column: str,
+                   remap_columns: dict = {},
+                   prefix: str= None,
+                   field_if_no_alias: bool = False,
+                   prepend_as: bool = False) -> list:
+    """
+
+    :param table_alias:
+    :param column:
+    :param field_if_no_alias: if True, return the field if the alias doesn't exist. If False return an empty string
+    :param prepend_as: prepend " AS " to the alias
+    :return: empty string if there is no alias and (i.e = field name)
+    """
+    col_alias = ''
+    if column in remap_columns:
+        col_alias = remap_columns[column]
+    elif prefix:
+        col_alias = prefix + column
+    elif field_if_no_alias:
+        col_alias = column
+    if prepend_as and col_alias:
+        col_alias = ' AS {al}'.format(al=col_alias)
+    return col_alias
 
 
 def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[]) -> int:
