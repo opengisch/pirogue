@@ -221,7 +221,7 @@ def insert_command(pg_cur: cursor,
 def update_command(pg_cur: cursor,
                    table_schema: str,
                    table_name: str,
-                   table_alias: str=None,
+                   table_alias: str = None,
                    table_type: str = 'table',
                    remove_pkey: bool = True,
                    pkey: str = None,
@@ -259,7 +259,7 @@ def update_command(pg_cur: cursor,
                           table_schema=table_schema,
                           table_name=table_name,
                           table_type=table_type,
-                          remove_pkey=remove_pkey and pkey is None),
+                          remove_pkey=remove_pkey and pkey is None and where_clause is None),
                   key=lambda _col: __column_priority(_col))
 
     if pkey and remove_pkey:
@@ -307,7 +307,6 @@ def update_command(pg_cur: cursor,
                                                                                                                                  remap_columns=remap_columns,
                                                                                                                                  prefix=prefix,
                                                                                                                                  field_if_no_alias=True)))))
-
 
 
 def update_columns(columns: list, sep:str=', ') -> str:
