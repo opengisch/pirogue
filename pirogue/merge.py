@@ -168,7 +168,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
            types='\n      '.join(["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::text"
                                  .format(shal=table_def['short_alias'], mrf=table_def['ref_master_key'], al=alias)
                                   for alias, table_def in self.joins.items()]),
-           no_subtype="'unknown'::text",
+           no_subtype="{type}''::text".format(self.view_alias if self.allow_parent_only else 'unknown'),
            type_name=self.type_name,
            master_columns=select_columns(self.cursor, self.master_schema, self.master_table,
                                          table_alias=self.view_alias,
@@ -357,7 +357,7 @@ CREATE TRIGGER tr_{vn}_on_update
 
     def __delete_trigger(self):
         sql = """
-CREATE FUNCTION {vs}.ft_{vn}_delete() RETURNS trigger AS
+CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_delete() RETURNS trigger AS
     $BODY$
     BEGIN
     CASE
