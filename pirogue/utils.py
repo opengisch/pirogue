@@ -130,6 +130,7 @@ def insert_command(pg_cur: cursor,
                    table_type: str = 'table',
                    table_alias: str = None,
                    remove_pkey: bool = True,
+                   pkey: str = None,
                    coalesce_pkey_default: bool = False,
                    skip_columns: list = [],
                    comment_skipped: bool = True,
@@ -148,6 +149,7 @@ def insert_command(pg_cur: cursor,
     :param table_type: the type of table, i.e. view or table
     :param table_alias: the alias of the table
     :param remove_pkey: if True, the primary is removed from the list
+    :param pkey: can be manually specified.
     :param coalesce_pkey_default: if True, the following expression is used to insert the primary key: COALESCE( NEW.{pkey}, {default_value} )
     :param skip_columns: list of columns to be skipped
     :param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
@@ -160,6 +162,8 @@ def insert_command(pg_cur: cursor,
     :param indent: add an indent in front
     :return:
     """
+    remove_pkey = remove_pkey and pkey is None
+
     # get columns
     cols = sorted(columns(pg_cur,
                           table_schema=table_schema,
@@ -168,8 +172,10 @@ def insert_command(pg_cur: cursor,
                           remove_pkey=remove_pkey),
                   key=lambda col: __column_priority(col))
 
-    pkey = None
-    if coalesce_pkey_default:
+    if pkey and remove_pkey:
+        cols.remove(pkey)
+
+    if not pkey and not coalesce_pkey_default:
         pkey = primary_key(pg_cur, table_schema, table_name)
 
     # check arguments

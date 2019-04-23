@@ -4,7 +4,7 @@ import argparse
 import os
 import yaml
 
-from pirogue.join import Join, JoinType
+from pirogue.join import Join
 from pirogue.merge import Merge
 
 
@@ -20,17 +20,13 @@ if __name__ == "__main__":
 
     subparsers = parser.add_subparsers(title='commands', description='pirogue command', dest='command')
 
-
     # simple join view
     join_parser = subparsers.add_parser('join', help='create a simple join view')
-    join_parser.add_argument('master_table')
-    join_parser.add_argument('join_table')
+    join_parser.add_argument('parent_table')
+    join_parser.add_argument('child_table')
     join_parser.add_argument('-s', '--view-schema', help='schema for the created join view')
     join_parser.add_argument('-v', '--view-name', help='name for the created join view')
     join_parser.add_argument('-t', '--join-type', help='the type of join: LEFT (default), RIGHT, FULL or INNER.')
-    # TODO specific column def
-    # join_parser.add_argument('-c', '--column-definition', nargs=2, action='append',
-    # help='adds a columns with a specific definition (column_name definition)')
 
     # merge view
     merger_parser = subparsers.add_parser('merge', help='create a merge view')
@@ -60,12 +56,10 @@ if __name__ == "__main__":
         pg_service = os.getenv('PGSERVICE')
 
     if args.command == 'join':
-        join_type = JoinType(args.join_type.upper()) if args.join_type else JoinType.LEFT
-        success = Join(args.master_table, args.join_table,
+        success = Join(args.parent_table, args.child_table,
                        pg_service=pg_service,
                        view_schema=args.view_schema,
-                       view_name=args.view_name,
-                       join_type=join_type).create()
+                       view_name=args.view_name).create()
         if not success:
             exit_val = 1
 
