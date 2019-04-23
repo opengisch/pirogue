@@ -210,18 +210,20 @@ DECLARE
 BEGIN
   {insert_trigger_pre}
   {insert_master}
-    
+
   CASE 
     {insert_joins}
   ELSE
     {raise_notice}
   END CASE;
-  
+
   {insert_trigger_post}
 RETURN NEW;
 END;
 $BODY$
 LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_{vn}_on_insert ON {vs}.{vn};
 
 CREATE TRIGGER tr_{vn}_on_insert
     INSTEAD OF INSERT ON {vs}.{vn}
@@ -270,7 +272,7 @@ DECLARE
 BEGIN
   {update_trigger_pre}
   {update_master}
-  
+
   IF OLD.{type_name} <> NEW.{type_name} THEN
     {type_change}
   END IF;
@@ -284,6 +286,8 @@ RETURN NEW;
 END;
 $BODY$
 LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_{vn}_on_udpate ON {vs}.{vn};
 
 CREATE TRIGGER tr_{vn}_on_update
     INSTEAD OF update ON {vs}.{vn}
@@ -364,7 +368,9 @@ CREATE FUNCTION {vs}.ft_{vn}_delete() RETURNS trigger AS
     END;
     $BODY$
     LANGUAGE 'plpgsql';
-    
+
+DROP TRIGGER IF EXISTS tr_{vn}_on_delete ON {vs}.{vn};
+
 CREATE TRIGGER tr_{vn}_on_delete
     INSTEAD OF DELETE ON {vs}.{vn}
     FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_delete();

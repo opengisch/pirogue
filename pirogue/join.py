@@ -137,6 +137,8 @@ END;
 $BODY$
 LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS tr_{dt}_on_insert ON {ds}.{dt};
+
 CREATE TRIGGER tr_{dt}_on_insert
   INSTEAD OF INSERT ON {ds}.{dt}
   FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_insert();
@@ -174,6 +176,8 @@ END;
 $BODY$
 LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS tr_{dt}_on_udpate ON {ds}.{dt};
+
 CREATE TRIGGER tr_{dt}_on_update
   INSTEAD OF UPDATE ON {ds}.{dt}
   FOR EACH ROW EXECUTE PROCEDURE {ds}.ft_{dt}_update();
@@ -201,6 +205,8 @@ RETURN NULL;
 END;
 $BODY$
 LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS tr_{dt}_on_delete ON {ds}.{dt};
 
 CREATE TRIGGER tr_{dt}_on_delete
   INSTEAD OF DELETE ON {ds}.{dt}
