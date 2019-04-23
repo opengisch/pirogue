@@ -176,7 +176,7 @@ END;
 $BODY$
 LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS tr_{dt}_on_udpate ON {ds}.{dt};
+DROP TRIGGER IF EXISTS tr_{dt}_on_update ON {ds}.{dt};
 
 CREATE TRIGGER tr_{dt}_on_update
   INSTEAD OF UPDATE ON {ds}.{dt}

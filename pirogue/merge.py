@@ -287,7 +287,7 @@ END;
 $BODY$
 LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS tr_{vn}_on_udpate ON {vs}.{vn};
+DROP TRIGGER IF EXISTS tr_{vn}_on_update ON {vs}.{vn};
 
 CREATE TRIGGER tr_{vn}_on_update
     INSTEAD OF update ON {vs}.{vn}
