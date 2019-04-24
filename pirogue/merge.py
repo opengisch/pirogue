@@ -131,7 +131,9 @@ class Merge:
         :return:
         """
 
-        for sql in [self.__view(),
+        for sql in [self.__drops(),
+                    self.__type(),
+                    self.__view(),
                     self.__insert_trigger(),
                     self.__update_trigger(),
                     self.__delete_trigger()]:
@@ -162,6 +164,26 @@ class Merge:
                      ).create()
         return True
 
+    def __drops(self) -> str:
+        sql = "DROP VIEW IF EXISTS {vs}.{vn};" \
+              "DROP TYPE IF EXISTS {vs}.{tn};" \
+                  .format(vs=self.view_schema,
+                    tn=self.type_name,
+                    vn=self.view_name)
+        return sql
+
+    def __type(self) -> str:
+        """
+
+        :return:
+        """
+        sql = "CREATE TYPE {vs}.{tn} AS ENUM ('{pt}', {ct} );"\
+            .format(vs=self.view_schema,
+                    tn=self.type_name,
+                    pt=self.view_alias if self.allow_parent_only else 'unknown',
+                    ct=', '.join(["'{al}'".format(al=alias) for alias in self.joins]))
+        return sql
+
     def __view(self) -> str:
         """
         :return:
@@ -180,10 +202,12 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
     {joined_tables}{additional_joins};        
 """.format(vs=self.view_schema,
            vn=self.view_name,
-           types='\n      '.join(["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::text"
-                                 .format(shal=table_def['short_alias'], mrf=table_def['ref_master_key'], al=alias)
+           types='\n      '.join(["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::{vs}.{tn}"
+                                 .format(shal=table_def['short_alias'], mrf=table_def['ref_master_key'],
+                                         al=alias, vs=self.view_schema, tn=self.type_name)
                                   for alias, table_def in self.joins.items()]),
-           no_subtype="'{type}'::text".format(type=self.view_alias if self.allow_parent_only else 'unknown'),
+           no_subtype="'{type}'::{vs}.{tn}".format(type=self.view_alias if self.allow_parent_only else 'unknown',
+                                                   vs=self.view_schema, tn=self.type_name),
            type_name=self.type_name,
            master_columns=select_columns(self.cursor, self.master_schema, self.master_table,
                                          table_alias=self.view_alias,
@@ -273,9 +297,10 @@ CREATE TRIGGER tr_{vn}_on_insert
                                         indent=8,
                                         coalesce_pkey_default=True,
                                         returning='{mpk} INTO NEW.{mpk}'.format(mpk=self.master_pkey)),
-           insert_joins='\n    '.join(["WHEN NEW.{type_name} = '{alias}' THEN"
+           insert_joins='\n    '.join(["WHEN NEW.{type_name} = '{alias}'::{vs}.{type_name} THEN"
                                        "\n      {insert_join}".format(type_name=self.type_name,
                                                                       alias=alias,
+                                                                      vs=self.view_schema,
                                                                       insert_join=insert_command(self.cursor,
                                                                                                  table_def['table_schema'],
                                                                                                  table_def['table_name'],
@@ -347,29 +372,32 @@ CREATE TRIGGER tr_{vn}_on_update
                                "\n      {inserts}"
                                "\n      ELSE -- do nothing"
                                "\n    END CASE;"
-                               .format(deletes='\n      '.join(["WHEN OLD.{type_name} = '{alias}' "
+                               .format(deletes='\n      '.join(["WHEN OLD.{type_name} = '{alias}'::{vs}.{type_name} "
                                                                 "THEN DELETE FROM {ts}.{tn} "
                                                                 "WHERE {rmk} = OLD.{mpk};"
                                                                 .format(type_name=self.type_name,
                                                                         alias=alias,
+                                                                        vs=self.view_schema,
                                                                         ts=table_def['table_schema'],
                                                                         tn=table_def['table_name'],
                                                                         rmk=table_def['ref_master_key'],
                                                                         mpk=self.master_pkey)
                                                                 for alias, table_def in self.joins.items()]),
-                                       inserts='\n      '.join(["WHEN NEW.{type_name} = '{alias}' "
+                                       inserts='\n      '.join(["WHEN NEW.{type_name} = '{alias}'::{vs}.{type_name} "
                                                                 "THEN INSERT INTO {ts}.{tn} "
                                                                 "({rmk}) VALUES (OLD.{mpk});"
                                                                .format(type_name=self.type_name,
                                                                        alias=alias,
+                                                                       vs=self.view_schema,
                                                                        ts=table_def['table_schema'],
                                                                        tn=table_def['table_name'],
                                                                        rmk=table_def['ref_master_key'],
                                                                        mpk=self.master_pkey)
                                                                 for alias, table_def in self.joins.items()])),
-                   update_joins='\n    '.join(["WHEN NEW.{type_name} = '{alias}' THEN"
+                   update_joins='\n    '.join(["WHEN NEW.{type_name} = '{alias}'::{vs}.{type_name} THEN"
                                                "\n      {update_join}".format(type_name=self.type_name,
                                                                               alias=alias,
+                                                                              vs=self.view_schema,
                                                                               update_join=update_command(self.cursor, table_def['table_schema'], table_def['table_name'],
                                                                                                          table_alias=table_def['short_alias'],
                                                                                                          pkey=table_def['pkey'],
@@ -408,11 +436,12 @@ CREATE TRIGGER tr_{vn}_on_delete
     INSTEAD OF DELETE ON {vs}.{vn}
     FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_delete();
 """.format(vn=self.view_name,
-           deletes='\n      '.join(["WHEN OLD.{type_name} = '{alias}' "
+           deletes='\n      '.join(["WHEN OLD.{type_name} = '{alias}'::{vs}.{type_name} "
                                     "THEN DELETE FROM {ts}.{tn} "
                                     "WHERE {rmk} = OLD.{mpk};"
                                    .format(type_name=self.type_name,
                                            alias=alias,
+                                           vs=self.view_schema,
                                            ts=table_def['table_schema'],
                                            tn=table_def['table_name'],
                                            rmk=table_def['ref_master_key'],

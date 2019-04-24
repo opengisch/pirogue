@@ -15,6 +15,10 @@ class TestMerge(unittest.TestCase):
         self.conn = psycopg2.connect("service={0}".format(pg_service))
         self.cur = self.conn.cursor()
 
+        sql = open("test/demo_data.sql").read()
+        self.cur.execute(sql)
+        self.conn.commit()
+
     def tearDown(self):
         self.conn.close()
 
