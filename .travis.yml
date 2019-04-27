@@ -23,10 +23,25 @@ script:
   - ./test/test_join.sh
   - nosetests -v
 
-deploy:
-  provider: script
-  script:
-    - ./docs/build-deploy.sh
-    - ./.deploy/deploy_to_pypi.sh
-  on:
-    tags: true
+jobs:
+  include:
+    - stage: tests
+      name: "Python test"
+      script: nosetests -v
+
+    - stage: tests
+      name: "Bash test"
+      script:
+        - ./.ci/setup_db.sh
+        - ./test/test_join.sh
+
+    - stage: docs
+      name: "Build and push docs"
+      script: ./docs/build_deploy.sh
+
+    - stage: deploy
+      name: "Deploy to PyPi"
+      script: ./.deploy/deploy_to_pypi.sh
+      on:
+        tags: true
+
