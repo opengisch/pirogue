@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from psycopg2.extensions import cursor
-from enum import Enum
 from pirogue.information_schema import columns, primary_key, default_value
 
 
@@ -12,8 +11,11 @@ class InvalidColumn(Exception):
 def table_parts(name: str) -> (str, str):
     """
     Returns a tuple with schema and table names
-    :param name:
-    :return:
+
+    Parameters
+    ----------
+    name
+        the schema specified name of the table or view.
     """
     if name and '.' in name:
         return name.split('.', 1)
@@ -37,24 +39,41 @@ def select_columns(pg_cur: cursor,
                    prefix: str = None,
                    indent: int = 2) -> str:
     """
+    Returns the list of columns to be used in a SELECT command
 
-    :param pg_cur: the psycopg cursor
-    :param table_schema: the schema
-    :param table_name: the name of the table
-    :param table_type: the type of table, i.e. view or table
-    :param table_alias: if not specified, table is used
-    :param remove_pkey: if True, the primary is removed from the list
-    :param skip_columns: list of columns to be skipped, raise an exception if the column does not exist
-    :param safe_skip_columns: list of columns to be skipped, do not raise exception if column does not exist
-    :param columns_list: if given use as list of columns
-    :param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
-    If remove_pkey is True, the primary key will not be printed
-    :param remap_columns: dictionary to remap columns
-    :param columns_on_top: bring the columns to the front of the list
-    :param columns_at_end: bring the columns to the end of the list
-    :param prefix: add a prefix to the columns (do not applied to remapped columns)
-    :param indent: add an indent in front
-    :return:
+    Parameters
+    ----------
+    pg_cur
+        the psycopg cursor
+    table_schema
+        the schema
+    table_name
+        the name of the table
+    table_type
+        the type of table, i.e. view or table
+    table_alias
+        if not specified, table is used
+    remove_pkey
+        if True, the primary is removed from the list
+    skip_columns
+        list of columns to be skipped, raise an exception if the column does not exist
+    safe_skip_columns
+        list of columns to be skipped, do not raise exception if column does not exist
+    columns_list
+        if given use as list of columns
+    comment_skipped
+        if True, skipped columns are written but commented, otherwise they are not written
+        If remove_pkey is True, the primary key will not be printed
+    remap_columns
+        dictionary to remap columns
+    columns_on_top
+        bring the columns to the front of the list
+    columns_at_end
+        bring the columns to the end of the list
+    prefix
+        add a prefix to the columns (do not applied to remapped columns)
+    indent
+        add an indent in front
     """
     cols = sorted(columns_list or columns(pg_cur,
                                           table_schema=table_schema,

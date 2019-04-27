@@ -29,10 +29,17 @@ class Merge:
                  create_joins: bool = False):
         """
         Produces the SQL code of the join table and triggers
-        :param definition: the YAML definition of the merge view
-        :param pg_service: if not given, it is determined using environment variable PGSERVICE
-        :param variables: dictionary for variables to be used in SQL deltas ( name => value )
-        :param create_joins: if True, simple joins will be created for all joined tables
+
+        Parameters
+        ----------
+        definition
+            the YAML definition of the merge view
+        pg_service
+            if not given, it is determined using environment variable PGSERVICE
+        variables
+            dictionary for variables to be used in SQL deltas ( name => value )
+        create_joins
+            if True, simple joins will be created for all joined tables
         """
 
         self.variables = variables
@@ -127,8 +134,8 @@ class Merge:
 
     def create(self) -> bool:
         """
-
-        :return:
+        Creates the merge view on the specified service
+        Returns True in case of success
         """
 
         for sql in [self.__drops(),
