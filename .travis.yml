@@ -19,22 +19,17 @@ env:
 install: pip install -r requirements.txt
 
 
-jobs:
-  include:
-    - stage: tests
-      name: "Unit tests"
-      script:
-        - ./.ci/setup_db.sh
-        - ./test/test_join.sh
-        - nosetests -v
+script:
+  - ./.ci/setup_db.sh
+  - ./test/test_join.sh
+  - nosetests -v
 
-    - stage: docs
-      name: "Build and push docs"
-      script: ./docs/build_deploy.sh
+deploy:
+  provider: script
+  script:
+    -  ./docs/build_deploy.sh
+    -  ./.deploy/deploy_to_pypi.sh
+  on:
+    tags: true
 
-    - stage: deploy
-      name: "Deploy to PyPi"
-      script: ./.deploy/deploy_to_pypi.sh
-      on:
-        tags: true
 
