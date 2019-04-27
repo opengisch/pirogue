@@ -4,7 +4,8 @@ import unittest
 import yaml
 import psycopg2
 import psycopg2.extras
-from pirogue.merge import Merge, InvalidDefinition
+from pirogue.merge import Merge
+from pirogue import InvalidDefinition
 
 pg_service = 'pirogue_test'
 

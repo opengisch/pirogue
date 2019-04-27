@@ -5,7 +5,8 @@ import psycopg2
 import psycopg2.extras
 
 from pirogue.utils import table_parts, select_columns, insert_command, update_command
-from pirogue.information_schema import TableHasNoPrimaryKey, reference_columns, primary_key, default_value
+from pirogue.information_schema import reference_columns, primary_key, default_value
+from pirogue.exceptions import TableHasNoPrimaryKey
 
 
 class Join:

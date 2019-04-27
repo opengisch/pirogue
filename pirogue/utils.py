@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
-
+from pirogue.exceptions import InvalidColumn
 from psycopg2.extensions import cursor
 from pirogue.information_schema import columns, primary_key, default_value
-
-
-class InvalidColumn(Exception):
-    pass
 
 
 def table_parts(name: str) -> (str, str):

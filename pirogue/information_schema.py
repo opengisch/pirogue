@@ -1,18 +1,6 @@
 # -*- coding: utf-8 -*-
-
+from pirogue.exceptions import TableHasNoPrimaryKey, NoReferenceFound, InvalidSkipColumns
 from psycopg2.extensions import cursor
-
-
-class TableHasNoPrimaryKey(Exception):
-    pass
-
-
-class NoReferenceFound(Exception):
-    pass
-
-
-class InvalidSkipColumns(Exception):
-    pass
 
 
 def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
