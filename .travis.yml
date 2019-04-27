@@ -18,22 +18,15 @@ env:
 
 install: pip install -r requirements.txt
 
-script:
-  - ./.ci/setup_db.sh
-  - ./test/test_join.sh
-  - nosetests -v
 
 jobs:
   include:
     - stage: tests
-      name: "Python test"
-      script: nosetests -v
-
-    - stage: tests
-      name: "Bash test"
+      name: "Unit tests"
       script:
         - ./.ci/setup_db.sh
         - ./test/test_join.sh
+        - nosetests -v
 
     - stage: docs
       name: "Build and push docs"
