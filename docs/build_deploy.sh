@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # build docs
 pushd docs
 sed -i "s/__VERSION__/${TRAVIS_TAG}/" conf.py
