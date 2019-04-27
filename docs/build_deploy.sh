@@ -11,7 +11,7 @@ mkdir publish && pushd publish
 echo "clone repo at gh-pages branch"
 git config --global user.email "qgisninja@gmail.com"
 git config --global user.name "Geo Ninja"
-git clone https://${GH_TOKEN}@github.com/opengis.ch/pirogue.git --depth 1 --branch gh-pages
+git clone https://${GH_TOKEN}@github.com/opengisch/pirogue.git --depth 1 --branch gh-pages
 
 cp -R ../_build/html/* .
 
