@@ -2,6 +2,7 @@
 
 # build docs
 pushd docs
+sed -i "s/__VERSION__/${TRAVIS_TAG}/" conf.py
 make html
 
 mkdir publish && pushd publish

@@ -24,9 +24,9 @@ copyright = '2019, Denis Rouzaud'
 author = 'Denis Rouzaud'
 
 # The short X.Y version
-version = ''
+version = '__VERSION__'
 # The full version, including alpha/beta/rc tags
-release = '0.5'
+release = '__VERSION__'
 
 
 # -- General configuration ---------------------------------------------------
