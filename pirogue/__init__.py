@@ -2,4 +2,5 @@
 
 from .join import Join
 from .merge import Merge
-from pirogue.exceptions import ReferencedTableDefinedBeforeReferencing, VariableError, InvalidDefinition
+from pirogue.exceptions import TableHasNoPrimaryKey, NoReferenceFound, InvalidSkipColumns, \
+    VariableError, InvalidDefinition, InvalidColumn

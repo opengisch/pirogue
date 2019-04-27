@@ -3,11 +3,10 @@
 import os
 import psycopg2
 import psycopg2.extras
-from pirogue import VariableError, InvalidDefinition
 
 from pirogue.utils import table_parts, select_columns, insert_command, update_command
 from pirogue.information_schema import reference_columns, primary_key, columns, geometry_type
-from pirogue.exceptions import TableHasNoPrimaryKey
+from pirogue.exceptions import TableHasNoPrimaryKey, VariableError, InvalidDefinition
 from pirogue.join import Join
 
 
