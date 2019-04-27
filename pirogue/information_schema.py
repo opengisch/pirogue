@@ -3,13 +3,18 @@ from pirogue.exceptions import TableHasNoPrimaryKey, NoReferenceFound, InvalidSk
 from psycopg2.extensions import cursor
 
 
-def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
+def primary_key(pg_cur: cursor, schema_name: str, table_name: str) -> str:
     """
     Returns the primary of a table
-    :param pg_cur: psycopg cursor
-    :param schema: the schema
-    :param table: the table
-    :return:
+
+    Parameters
+    ----------
+    pg_cur
+        psycopg cursor
+    schema_name
+        the schema name
+    table_name
+        the table name
     """
     sql = "SELECT c.column_name"\
           " FROM information_schema.key_column_usage AS c "\
@@ -17,7 +22,7 @@ def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
           " ON t.constraint_name = c.constraint_name"\
           " WHERE t.table_name = '{t}'"\
           " AND t.table_schema = '{s}'"\
-          " AND t.constraint_type = 'PRIMARY KEY'".format(s=schema, t=table)
+          " AND t.constraint_type = 'PRIMARY KEY'".format(s=schema_name, t=table_name)
     pg_cur.execute(sql)
     try:
         pkey = pg_cur.fetchone()[0]
@@ -29,14 +34,22 @@ def primary_key(pg_cur: cursor, schema: str, table: str) -> str:
 def columns(pg_cur: cursor, table_schema: str, table_name: str, table_type: str = 'table',
             remove_pkey: bool=False, skip_columns: list=[]) -> list:
     """
-    Returns the columns of a table
-    :param pg_cur: psycopg cursor
-    :param table_schema: the table_schema
-    :param table_name: the table
-    :param table_type: the type of table, i.e. view or table
-    :param remove_pkey: if True, the primary key is dropped
-    :param skip_columns: list of columns to be skipped
-    :return: the list of columns
+    Returns the list of columns of a table
+
+    Parameters
+    ----------
+    pg_cur
+        psycopg cursor
+    table_schema
+        the table_schema
+    table_name
+        the table
+    table_type
+        the type of table, i.e. view or table
+    remove_pkey
+        if True, the primary key is dropped
+    skip_columns
+        list of columns to be skipped
     """
     assert table_type.lower() in ('table', 'view')
     if table_type.lower() == 'table':
@@ -78,12 +91,19 @@ def reference_columns(pg_cur: cursor,
                       foreign_table_schema: str, foreign_table_name: str) -> (str, str):
     """
     Returns the columns use in a reference constraint
-    :param pg_cur:
-    :param table_schema:
-    :param table_name:
-    :param foreign_table_schema:
-    :param foreign_table_name:
-    :return:
+
+    Parameters
+    ----------
+    pg_cur
+        the psycopg cursor
+    table_schema
+        the table schema
+    table_name
+        the table name
+    foreign_table_schema
+        the schema of the foreign table
+    foreign_table_name
+        the name of the foreign table
     """
     # see https://stackoverflow.com/a/1152321/1548052
     sql = "SELECT kcu.column_name, ccu.column_name AS foreign_column_name " \
@@ -115,11 +135,17 @@ def reference_columns(pg_cur: cursor,
 def default_value(pg_cur: cursor, table_schema: str, table_name: str, column: str) -> str:
     """
     Returns the default value of the column
-    :param pg_cur:
-    :param table_schema:
-    :param table_name:
-    :param column:
-    :return:
+
+    Parameters
+    ----------
+    pg_cur
+        the psycopg cursor
+    table_schema
+        the table schema
+    table_name
+        the table name
+    column
+        the column name
     """
     # see https://stackoverflow.com/a/8148177/1548052
 
@@ -137,14 +163,20 @@ def default_value(pg_cur: cursor, table_schema: str, table_name: str, column: st
     return pg_cur.fetchone()[0] or 'NULL'
 
 
-def geometry_type(pg_cur: cursor, table_schema: str, table_name: str, column: str) -> tuple:
+def geometry_type(pg_cur: cursor, table_schema: str, table_name: str, column: str = 'geometry') -> (str,int):
     """
-    Returns the geometry type of a column
-    :param pg_cur:
-    :param table_schema:
-    :param table_name:
-    :param column:
-    :return: a tuple (type, srid)
+    Returns the geometry type of a column as a tuple (type, srid)
+
+    Parameters
+    ----------
+    pg_cur
+        the psycopg cursor
+    table_schema
+        the table schema
+    table_name
+        the table name
+    column:
+        the geometry column name, defaults to "geometry"
     """
     sql = "SELECT type, srid " \
           "FROM geometry_columns " \
