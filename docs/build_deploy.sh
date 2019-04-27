@@ -21,7 +21,7 @@ echo "git add, commit push"
 git add .
 git commit -m "API docs for: $TRAVIS_TAG"
 
-git push -v
+git push -v origin HEAD:gh-pages
 
 popd
 popd
