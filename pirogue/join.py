@@ -21,12 +21,21 @@ class Join:
                  pkey_default_value: bool = False):
         """
         Produces the SQL code of the join table and triggers
-        :param pg_service:
-        :param parent_table:
-        :param child_table:
-        :param view_schema: the schema where the view will written to
-        :param view_name: the name of the created view, defaults to vw_{parent_table}_{join_table}
-        :param : The primary key column of the view will have a default value according to the child primary key table
+
+        Parameters
+        ----------
+        pg_service
+            if not given, it is determined using environment variable PGSERVICE
+        parent_table
+            the parent table, can be schema specified
+        child_table
+            the child table, can be schema specified
+        view_schema
+            the schema where the view will written to
+        view_name
+            the name of the created view, defaults to vw_{parent_table}_{join_table}
+        pkey_default_value
+            the primary key column of the view will have a default value according to the child primary key table
         """
 
         if pg_service is None:
@@ -62,9 +71,9 @@ class Join:
 
     def create(self) -> bool:
         """
-        :return:
+        Creates the merge view on the specified service
+        Returns True in case of success
         """
-
         for sql in [self.__view(),
                     self.__insert_trigger(),
                     self.__update_trigger(),

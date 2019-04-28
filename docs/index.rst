@@ -7,10 +7,12 @@ Welcome to pirogue's documentation!
 .. autosummary::
     :toctree: _autosummary
 
-    pirogue.merge
-    pirogue.join
+    pirogue.Merge
+    pirogue.Join
     pirogue.information_schema
     pirogue.utils
+    pirogue.exceptions
+
 
 
 Indices and tables
