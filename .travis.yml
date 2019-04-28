@@ -34,7 +34,6 @@ deploy:
     target_branch: gh-pages
     on:
       branch: master
-      tags: true
 
   - provider: script
     script:
