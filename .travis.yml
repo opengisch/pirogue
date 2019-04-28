@@ -23,13 +23,22 @@ script:
   - ./.ci/setup_db.sh
   - ./test/test_join.sh
   - nosetests -v
-  - ./docs/build_deploy.sh
+  - ./docs/build_deploy.sh  # TODO: move to deploy
 
 deploy:
-  provider: script
-  script:
-    -  ./.deploy/deploy_to_pypi.sh
-  on:
-    tags: true
+  - provider: pages
+    skip_cleanup: true
+    github_token: ${GH_TOKEN}
+    local_dir: ${TRAVIS_DIR}/docs/_build/html
+    keep_history: true
+    target_branch: gh-pages
+    on:
+      branch: master
+
+  - provider: script
+    script:
+      -  ./.deploy/deploy_to_pypi.sh
+    on:
+      tags: true
 
 
