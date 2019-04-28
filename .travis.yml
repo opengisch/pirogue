@@ -34,11 +34,13 @@ deploy:
     target_branch: gh-pages
     on:
       branch: master
+      tags: true
 
   - provider: script
     script:
       -  ./.deploy/deploy_to_pypi.sh
     on:
+      branch: master
       tags: true
 
 

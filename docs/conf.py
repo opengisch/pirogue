@@ -31,7 +31,7 @@ release = '__VERSION__'
 
 # -- General configuration ---------------------------------------------------
 
-autoclass_content = "both"  # include both class docstring and __init__
+autoclass_content = "class"
 autodoc_default_flags = [
          "members",
          "show-inheritance",
