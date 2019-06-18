@@ -1,0 +1,15 @@
+
+
+# view_schema
+# view_name
+# alias
+table: pirogue_test.cat
+pkey: cid
+
+joins:
+  cat_breed:
+    table: pirogue_test.cat_breed
+    remap_columns:
+      id: breed_id
+  vet:
+    table: pirogue_test.vet

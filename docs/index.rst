@@ -7,11 +7,13 @@ Welcome to pirogue's documentation!
 .. autosummary::
     :toctree: _autosummary
 
-    pirogue.Merge
-    pirogue.Join
+    pirogue.SingleInheritance
+    pirogue.MultipleInheritance
+    pirogue.SimpleJoins
     pirogue.information_schema
     pirogue.utils
     pirogue.exceptions
+    scripts.pirogue.__main__
 
 
 

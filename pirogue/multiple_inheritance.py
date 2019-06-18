@@ -7,35 +7,40 @@ import psycopg2.extras
 from pirogue.utils import table_parts, select_columns, insert_command, update_command
 from pirogue.information_schema import reference_columns, primary_key, columns, geometry_type
 from pirogue.exceptions import TableHasNoPrimaryKey, VariableError, InvalidDefinition
-from pirogue.join import Join
+from pirogue.single_inheritance import SingleInheritance
 
 
-class Merge:
+class MultipleInheritance:
     """
-    Creates a merge view with associated triggers to edit.
+    Creates a view for multiple inheritance objects with associated triggers to edit data.
     """
 
-    def __init__(self, definition: dict,
+    def __init__(self,
+                 definition: dict,
                  pg_service: str = None,
                  variables: dict = {},
-                 create_joins: bool = False):
+                 create_joins: bool = False,
+                 drop: bool = False):
         """
         Produces the SQL code of the join table and triggers
 
         Parameters
         ----------
         definition
-            the YAML definition of the merge view
+            the YAML definition of the multiple inheritance
         pg_service
             if not given, it is determined using environment variable PGSERVICE
         variables
             dictionary for variables to be used in SQL deltas ( name => value )
         create_joins
             if True, simple joins will be created for all joined tables
+        drop
+            if True, will drop any existing view, type or trigger that will be created later
         """
 
         self.variables = variables
         self.create_joins = create_joins
+        self.drop = drop
 
         self.pg_service = pg_service
         if self.pg_service is None:
@@ -129,19 +134,24 @@ class Merge:
         Creates the merge view on the specified service
         Returns True in case of success
         """
+        queries = []
+        success = True
+        if self.drop:
+            queries.append(self.__drops())
+        queries.append(self.__type())
+        queries.append(self.__view())
+        queries.append(self.__insert_trigger())
+        queries.append(self.__update_trigger())
+        queries.append(self.__delete_trigger())
 
-        for sql in [self.__drops(),
-                    self.__type(),
-                    self.__view(),
-                    self.__insert_trigger(),
-                    self.__update_trigger(),
-                    self.__delete_trigger()]:
+        for sql in queries:
             try:
                 if self.variables:
                     self.cursor.execute(sql, self.variables)
                 else:
                     self.cursor.execute(sql)
             except TypeError as e:
+                success = False
                 print("*** Failing:\n{}\n***".format(sql))
                 raise VariableError("An error in a SQL variable is probable. "
                                     "Check the variables in the SQL code "
@@ -156,12 +166,12 @@ class Merge:
 
         if self.create_joins:
             for alias, table_def in self.joins.items():
-                Join(pg_service=self.pg_service,
-                     parent_table='{s}.{t}'.format(s=self.master_schema, t=self.master_table),
-                     child_table='{s}.{t}'.format(s=table_def['table_schema'], t=table_def['table_name']),
-                     view_name='vw_{a}'.format(a=alias)
-                     ).create()
-        return True
+                success &= SingleInheritance(pg_service=self.pg_service,
+                                             parent_table='{s}.{t}'.format(s=self.master_schema, t=self.master_table),
+                                             child_table='{s}.{t}'.format(s=table_def['table_schema'], t=table_def['table_name']),
+                                             view_name='vw_{a}'.format(a=alias)
+                                             ).create()
+        return success
 
     def __drops(self) -> str:
         sql = "DROP VIEW IF EXISTS {vs}.{vn};" \
