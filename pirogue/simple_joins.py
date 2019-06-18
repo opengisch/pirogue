@@ -29,7 +29,7 @@ class SimpleJoins:
 
         # check definition validity
         for key in definition.keys():
-            if key not in ('table', 'view_schema','joins', 'pkey'):
+            if key not in ('table', 'view_schema','joins', 'pkey', 'view_name'):
                 raise InvalidDefinition('key {k} is not a valid'.format(k=key))
         # check joins validity
         for alias, table_def in definition['joins'].items():
@@ -121,12 +121,13 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
                                     for alias, child_def in self.child_tables.items()]),
            ps=self.parent_schema,
            pt=self.parent_table,
-           joins='\n  '.join(["LEFT JOIN {cs}.{ct} ON {ct}.{cpk} = {pt}.{rpk}".format(cs=child.schema_name,
-                                                                                      ct=child.table_name,
-                                                                                      cpk=child.pkey,
-                                                                                      pt=self.parent_table,
-                                                                                      rpk=child.parent_referenced_key)
-                            for child in self.child_tables.values()])
+           joins='\n  '.join(["LEFT JOIN {cs}.{ct} {alias} ON {alias}.{cpk} = {pt}.{rpk}".format(cs=child.schema_name,
+                                                                                                 ct=child.table_name,
+                                                                                                 alias=alias,
+                                                                                                 cpk=child.pkey,
+                                                                                                 pt=self.parent_table,
+                                                                                                 rpk=child.parent_referenced_key)
+                            for alias, child in self.child_tables.items()])
            )
 
         return sql

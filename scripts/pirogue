@@ -17,7 +17,6 @@ if __name__ == "__main__":
     # create the top-level parser
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--version", help="print the version and exit", action='store_true')
-    parser.add_argument('-p', '--pg_service', help='postgres service')
 
     subparsers = parser.add_subparsers(title='commands', description='pirogue command', dest='command')
 
@@ -30,6 +29,8 @@ if __name__ == "__main__":
     single_inheritance_parser.add_argument('-d', '--pkey-default-value', action='store_true',
                                            help='The primary key column of the view will have a default value'
                                                 ' according to the child primary key table')
+    single_inheritance_parser.add_argument('-p', '--pg_service', help='postgres service')
+
 
     # multiple inheritance view
     multiple_inheritance_parser = subparsers.add_parser('multiple_inheritance', help='create a multiple inheritance view')
@@ -42,6 +43,14 @@ if __name__ == "__main__":
                                              help='Assign variable for running SQL deltas. '
                                                   'Format is: (string|float|int) name value. ',
                                              action='append', default=[])
+    multiple_inheritance_parser.add_argument('-p', '--pg_service', help='postgres service')
+
+
+    # multiple inheritance view
+    simple_joins = subparsers.add_parser('simple_joins', help='create a view for simple joins without any editing capability')
+    simple_joins.add_argument('definition_file', help='YAML definition of the merge view', type=argparse.FileType('r'))
+    simple_joins.add_argument('-p', '--pg_service', help='postgres service')
+
 
     args = parser.parse_args()
 
