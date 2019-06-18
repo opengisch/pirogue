@@ -9,9 +9,9 @@ from pirogue.information_schema import reference_columns, primary_key, default_v
 from pirogue.exceptions import TableHasNoPrimaryKey
 
 
-class Join:
+class SingleInheritance:
     """
-    Creates a simple join view with associated triggers to edit.
+    Creates a join view with associated triggers to edit for a single inheritance.
     """
 
     def __init__(self, parent_table: str, child_table: str,
@@ -74,6 +74,7 @@ class Join:
         Creates the merge view on the specified service
         Returns True in case of success
         """
+        success = True
         for sql in [self.__view(),
                     self.__insert_trigger(),
                     self.__update_trigger(),
@@ -84,11 +85,12 @@ class Join:
                 if sql:
                     self.cursor.execute(sql)
             except psycopg2.Error as e:
+                success = False
                 print("*** Failing:\n{}\n***".format(sql))
                 raise e
         self.conn.commit()
         self.conn.close()
-        return True
+        return success
 
     def __view(self) -> str:
         """

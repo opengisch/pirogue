@@ -4,13 +4,13 @@ import unittest
 import yaml
 import psycopg2
 import psycopg2.extras
-from pirogue import Merge
+from pirogue import MultipleInheritance
 from pirogue.exceptions import InvalidDefinition
 
 pg_service = 'pirogue_test'
 
 
-class TestMerge(unittest.TestCase):
+class TestMultipleInheritance(unittest.TestCase):
 
     def setUp(self):
         self.conn = psycopg2.connect("service={0}".format(pg_service))
@@ -24,8 +24,8 @@ class TestMerge(unittest.TestCase):
         self.conn.close()
 
     def test_insert_update_delete(self):
-        yaml_definition = yaml.safe_load(open("test/merge_simple.yaml"))
-        Merge(yaml_definition, pg_service=pg_service).create()
+        yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
+        MultipleInheritance(yaml_definition, pg_service=pg_service).create()
 
         # insert
         self.cur.execute("INSERT INTO pirogue_test.vw_merge_animal (animal_type,name,year,fk_cat_breed,eye_color) VALUES ('cat','felix',1985,2,'black');")
@@ -48,10 +48,10 @@ class TestMerge(unittest.TestCase):
         self.assertIsNone(self.cur.fetchone())
 
     def test_type_change_not_allowed(self):
-        yaml_definition = yaml.safe_load(open("test/merge_simple.yaml"))
+        yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
         yaml_definition['view_name'] = 'vw_animal_no_type_change'
         yaml_definition['allow_type_change'] = False
-        Merge(yaml_definition, pg_service=pg_service).create()
+        MultipleInheritance(yaml_definition, pg_service=pg_service).create()
         self.cur.execute("INSERT INTO pirogue_test.vw_animal_no_type_change (animal_type,name,year,fk_cat_breed,eye_color) VALUES ('dog','albert',1933,2,'yellow');")
         error_caught = False
         try:
@@ -61,11 +61,11 @@ class TestMerge(unittest.TestCase):
         self.assertTrue(error_caught)
 
     def test_invalid_definition(self):
-        yaml_definition = yaml.safe_load(open("test/merge_simple.yaml"))
+        yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
         yaml_definition['MyBadKey'] = 'Ouch'
         error_caught = False
         try:
-            Merge(yaml_definition, pg_service=pg_service).create()
+            MultipleInheritance(yaml_definition, pg_service=pg_service).create()
         except InvalidDefinition:
             error_caught = True
             self.assertTrue(error_caught)

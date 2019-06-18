@@ -1,0 +1,19 @@
+
+
+# view_schema
+# view_name
+# alias
+table: pirogue_test.vw_merge_animal
+pkey: id
+
+
+joins:
+  cat_breed:
+    table: pirogue_test.cat_breed
+    fkey: fk_cat_breed
+    prefix: cat_
+
+  dog_breed:
+    table: pirogue_test.dog_breed
+    fkey: fk_dog_breed
+    prefix: dog_
