@@ -51,7 +51,6 @@ if __name__ == "__main__":
     simple_joins.add_argument('definition_file', help='YAML definition of the merge view', type=argparse.FileType('r'))
     simple_joins.add_argument('-p', '--pg_service', help='postgres service')
 
-
     args = parser.parse_args()
 
     # print the version and exit
