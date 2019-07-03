@@ -2,15 +2,11 @@
 
 set -e
 
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-
-export PYTHONPATH=${DIR}/..:${PYTHONPATH}
-
 export PGSERVICE=pirogue_test
 
-${DIR}/../scripts/pirogue.py single_inheritance pirogue_test.animal pirogue_test.cat
-${DIR}/../scripts/pirogue.py single_inheritance pirogue_test.animal pirogue_test.aardvark --view-name vw_aardvark
-${DIR}/../scripts/pirogue.py single_inheritance pirogue_test.animal pirogue_test.eagle --pkey-default-value
+pirogue single_inheritance pirogue_test.animal pirogue_test.cat
+pirogue single_inheritance pirogue_test.animal pirogue_test.aardvark --view-name vw_aardvark
+pirogue single_inheritance pirogue_test.animal pirogue_test.eagle --pkey-default-value
 ERROR=0
 
 PSQL_ARGS="--tuples-only --no-align --field-separator @"
