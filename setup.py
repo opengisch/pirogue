@@ -13,17 +13,19 @@ if sys.version_info < python_min_version:
 setup(
     name = 'pirogue',
     packages = [
-        'pirogue'
+        'pirogue',
+        'scripts'
     ],
-    scripts = [
-        'scripts/pirogue'
-    ],
-    version = '[VERSION]',
+    entry_points={
+        'console_scripts': [
+            'pirogue = scripts.pirogue:main'
+        ]
+    },    version = '[VERSION]',
     description = 'PostgreSQL view generator',
     author = 'Denis Rouzaud',
     author_email = 'denis.rouzaud@gmail.com',
     url = 'https://github.com/opengisch/pirogue',
-    download_url = 'https://github.com/opengisch/pirogue/archive/[VERSION].tar.gz', # I'll explain this in a second
+    download_url = 'https://github.com/opengisch/pirogue/archive/[VERSION].tar.gz',
     keywords = ['postgres'],
     classifiers = [
         'Topic :: Database',

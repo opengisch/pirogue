@@ -9,10 +9,7 @@ from pirogue.multiple_inheritance import MultipleInheritance
 from pirogue.simple_joins import SimpleJoins
 
 
-if __name__ == "__main__":
-    """
-    Main process
-    """
+def main():
 
     # create the top-level parser
     parser = argparse.ArgumentParser()
@@ -101,3 +98,7 @@ if __name__ == "__main__":
 
 
     exit(exit_val)
+
+
+if __name__ == "__main__":
+    main()
