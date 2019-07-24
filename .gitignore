@@ -1,8 +1,9 @@
 # Sphinx documentation
 docs/_build/
 docs/_autosummary/
-
+build/
+dist/
 __pycache__/
-
+*.egg-info
 .idea
 .DS_Store

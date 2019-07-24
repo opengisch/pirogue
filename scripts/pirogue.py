@@ -52,7 +52,8 @@ def main():
 
     # print the version and exit
     if args.version:
-        print('pirogue version: {}'.format('[DEV]'))
+        import pkg_resources
+        print('pirogue version: {}'.format(pkg_resources.get_distribution('pirogue').version))
         parser.exit()
 
     # if no command is passed, print the help and exit
