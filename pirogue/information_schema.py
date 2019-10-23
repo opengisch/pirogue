@@ -149,7 +149,7 @@ def default_value(pg_cur: cursor, table_schema: str, table_name: str, column: st
     """
     # see https://stackoverflow.com/a/8148177/1548052
 
-    sql = "SELECT d.adsrc AS default_value\n" \
+    sql = "SELECT pg_get_expr(d.adbin, d.adrelid) AS default_value\n" \
           "FROM pg_catalog.pg_attribute a\n" \
           "LEFT JOIN pg_catalog.pg_attrdef d ON (a.attrelid, a.attnum) = (d.adrelid,  d.adnum)\n" \
           "WHERE  NOT a.attisdropped   -- no dropped (dead) columns\n" \
