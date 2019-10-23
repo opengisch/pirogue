@@ -3,10 +3,13 @@ language: python
 python:
   - 3.6
 
+jobs:
+  include:
+  - env: POSTGRESQL_VERSION=9.6
+  - env: POSTGRESQL_VERSION=10
+  - env: POSTGRESQL_VERSION=11
+
 env:
-  - POSTGRESQL_VERSION=9.6
-  - POSTGRESQL_VERSION=10
-  - POSTGRESQL_VERSION=11
   global:
     - PGUSER=postgres
     # GH_TOKEN to push API docs
