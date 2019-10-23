@@ -22,7 +22,7 @@ jobs:
     env: POSTGRESQL_VERSION=11
   
   - stage: deploy
-    name "Deploy docs"
+    name: "Deploy docs"
     script: ./docs/build_deploy.sh
     deploy:
       provider: pages
@@ -35,7 +35,7 @@ jobs:
         branch: master 
 
   - stage: deploy
-    name "Deploy on PyPi"
+    name: "Deploy on PyPi"
     script: skip
     deploy:          
       provider: pypi
