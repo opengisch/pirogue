@@ -12,35 +12,45 @@ env:
 jobs:
   include:
   - stage: test
-    name: "Tests"
-  - env: POSTGRESQL_VERSION=9.6
-  - env: POSTGRESQL_VERSION=10
-  - env: POSTGRESQL_VERSION=11
+    name: "Test on PG 9.6"
+    env: POSTGRESQL_VERSION=9.6
+  - stage: test
+    name: "Test on PG 9.6"
+    env: POSTGRESQL_VERSION=10
+  - stage: test
+    name: "Test on PG 9.6"
+    env: POSTGRESQL_VERSION=11
   
   - stage: deploy
+    name "Deploy docs"
     script: ./docs/build_deploy.sh
     deploy:
-      - provider: pages
-        skip_cleanup: true
-        github_token: ${GH_TOKEN}
-        local_dir: ${TRAVIS_BUILD_DIR}/docs/_build/html
-        keep_history: true
-        target_branch: gh-pages
-        on:
-          branch: master    
-      - provider: pypi
-        skip_existing: true
-        skip_cleanup: true
-        distributions: sdist
-        on:
-          tags: true
-          branch: master
-        user:
-          secure: "BKDBHcfqxEQMUjsDdM97IBKB/Ahpq36H2Ybl3XCz1Ko4pSzRsfwV2MABVp8G8w6v1BtrNN5uie+BSP4f/zwRJFGp/an5szxtcaHr6p5r7ySflB1rTGNrCTngby8ob2wjZ0OZ6V+awQFSEnYLZHBJcwMH3qGyBtTgKCrBV4AGdB/8l2+cu21Ro7i3yLZB+6FCrI8rijMkxDp46TVCjP1UX+UzTdTcNJ3fxTuadnHar6wTQExe8jK+SzaD6hrkrBt3Iv64X15NQylPMnWNrDiYRnmLOd0p3CKyFcnuT34abWBx9bk9cWInp7N2/eR+rATqnPRZUP38pWs96G0B7glmiIcMlaj0raLYPiGOIqBgfu1lZqci8fvOOCMdoJeeRWJgnARpPPyv3S1709amuOURzKKlARE+DkqFMoqTYa2naZRRDTXe5sE/F3I8/o7rx75ZdtdTn5Gc8nHabjL5HluJeAZGodUzSPUEJ1jTXnc1E8xLUZCnZjzHYd2icM65z5ZxFh/g4SocLqx5mnJ0IEcCub57JD4/H2/vXvxW+pA+04ssT5wRqPJIp9+55llDh/dyDGp+3HmnvyPb9t4LboqomfBQu3/QjjMxzTu6F8oBHY4UgrP36MYZ/IItK6zUS6JoPeLc3xRQbrxPYIFPqSDidYBprJ2FpU6ESZt4vNVIfAw="
-        password:
-          secure: "rKnF2OyFNMv4HHIFF1iefMtSjnUXvLjqZpd141oaujS5uDqoAJ7i/svYnYIAY+B6cbo2HcQLgBZZw0gx3yK8twgwdy+SwaF3kIOWofAGjqJrlfsQK4ZYnVVA3T5eBa6q6lTqrhjGwADk8wbXJFtozMryaRfr7RlQExZ2ugCmlQHlPI/ALFDa3J2jlsEpUmL/6/lVlCIvHotkADoaWMJJ+j31Fy+jDdQd5aaRQk3XJkZnPK5mQ2H6M3kUD7rk19meZfE9VORLWALJAqzQ7sNfoQirIbCoorTk96zuPkVwq9N3qUWoF82H0H5fELt1Gtec40AoewD7YmImx7v9uKi1mFN/k3D8hEapxU7hCkxYKBC+Ail6m+twGlGg1lCNNyRD8N+RuTv71aWpjRSKWr9nN4tR71Ko/egA9Riddu0ynn1i+/Wc4X8MIH5FU6cp5PfU34Th0CCqJRECv9a7MGJ6TXj/VEYyaH0rmDm3/y+wzKCEkpuEWDyXxV3tdLL/2LhOVzNwHTbrk0SRugUU7sKjjCvBE0Uq29hzYeV/jdiTnYNifzb7xkzDZkCFwQzEtVFJOQNH1sHJtipM9mdKRrD7+O1XzOfU1b+yXaEkbUdJ+uHlufbh7BF/uG0+TtTYIA0ZuMffCSRIkIaSVhEoWrHuy7LS4P/eUf119oV1qkhK7V4="
+      provider: pages
+      skip_cleanup: true
+      github_token: ${GH_TOKEN}
+      local_dir: ${TRAVIS_BUILD_DIR}/docs/_build/html
+      keep_history: true
+      target_branch: gh-pages
+      on:
+        branch: master 
 
-  
+  - stage: deploy
+    name "Deploy on PyPi"
+    script: skip
+    deploy:          
+      provider: pypi
+      skip_existing: true
+      skip_cleanup: true
+      distributions: sdist
+      on:
+        tags: true
+        branch: master
+      user:
+        secure: "BKDBHcfqxEQMUjsDdM97IBKB/Ahpq36H2Ybl3XCz1Ko4pSzRsfwV2MABVp8G8w6v1BtrNN5uie+BSP4f/zwRJFGp/an5szxtcaHr6p5r7ySflB1rTGNrCTngby8ob2wjZ0OZ6V+awQFSEnYLZHBJcwMH3qGyBtTgKCrBV4AGdB/8l2+cu21Ro7i3yLZB+6FCrI8rijMkxDp46TVCjP1UX+UzTdTcNJ3fxTuadnHar6wTQExe8jK+SzaD6hrkrBt3Iv64X15NQylPMnWNrDiYRnmLOd0p3CKyFcnuT34abWBx9bk9cWInp7N2/eR+rATqnPRZUP38pWs96G0B7glmiIcMlaj0raLYPiGOIqBgfu1lZqci8fvOOCMdoJeeRWJgnARpPPyv3S1709amuOURzKKlARE+DkqFMoqTYa2naZRRDTXe5sE/F3I8/o7rx75ZdtdTn5Gc8nHabjL5HluJeAZGodUzSPUEJ1jTXnc1E8xLUZCnZjzHYd2icM65z5ZxFh/g4SocLqx5mnJ0IEcCub57JD4/H2/vXvxW+pA+04ssT5wRqPJIp9+55llDh/dyDGp+3HmnvyPb9t4LboqomfBQu3/QjjMxzTu6F8oBHY4UgrP36MYZ/IItK6zUS6JoPeLc3xRQbrxPYIFPqSDidYBprJ2FpU6ESZt4vNVIfAw="
+      password:
+        secure: "rKnF2OyFNMv4HHIFF1iefMtSjnUXvLjqZpd141oaujS5uDqoAJ7i/svYnYIAY+B6cbo2HcQLgBZZw0gx3yK8twgwdy+SwaF3kIOWofAGjqJrlfsQK4ZYnVVA3T5eBa6q6lTqrhjGwADk8wbXJFtozMryaRfr7RlQExZ2ugCmlQHlPI/ALFDa3J2jlsEpUmL/6/lVlCIvHotkADoaWMJJ+j31Fy+jDdQd5aaRQk3XJkZnPK5mQ2H6M3kUD7rk19meZfE9VORLWALJAqzQ7sNfoQirIbCoorTk96zuPkVwq9N3qUWoF82H0H5fELt1Gtec40AoewD7YmImx7v9uKi1mFN/k3D8hEapxU7hCkxYKBC+Ail6m+twGlGg1lCNNyRD8N+RuTv71aWpjRSKWr9nN4tR71Ko/egA9Riddu0ynn1i+/Wc4X8MIH5FU6cp5PfU34Th0CCqJRECv9a7MGJ6TXj/VEYyaH0rmDm3/y+wzKCEkpuEWDyXxV3tdLL/2LhOVzNwHTbrk0SRugUU7sKjjCvBE0Uq29hzYeV/jdiTnYNifzb7xkzDZkCFwQzEtVFJOQNH1sHJtipM9mdKRrD7+O1XzOfU1b+yXaEkbUdJ+uHlufbh7BF/uG0+TtTYIA0ZuMffCSRIkIaSVhEoWrHuy7LS4P/eUf119oV1qkhK7V4="
+
+
  
 before_install:
   - sudo service postgresql stop && sudo service postgresql start $POSTGRESQL_VERSION
