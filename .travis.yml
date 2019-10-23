@@ -15,10 +15,10 @@ jobs:
     name: "Test on PG 9.6"
     env: POSTGRESQL_VERSION=9.6
   - stage: test
-    name: "Test on PG 9.6"
+    name: "Test on PG 10"
     env: POSTGRESQL_VERSION=10
   - stage: test
-    name: "Test on PG 9.6"
+    name: "Test on PG 11"
     env: POSTGRESQL_VERSION=11
   
   - stage: deploy
