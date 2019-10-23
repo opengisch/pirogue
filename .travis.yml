@@ -3,14 +3,21 @@ language: python
 python:
   - 3.6
 
-addons:
-  postgresql: "9.6"
+jobs:
+  include:
+  - env: POSTGRESQL_VERSION=9.6
+  - env: POSTGRESQL_VERSION=10
+  - env: POSTGRESQL_VERSION=11
 
 env:
   global:
     - PGUSER=postgres
     # GH_TOKEN to push API docs
     - secure: "jYePkfPWC/zfdFR0GIgsPtWaJy6sio4QILcl7eWySPmiC6NPKpV33FaCn/hpBw4F9BhjRO4Hn6gGW0Tu10MY3RmNnnCJSLiTTeMv2teXWh2Xc3bLEeXVGJMiJBhlQyM1PRf0cVpLqG+r4sv++ehl2izBimkX0RB5OCEQHslVtuIOilshyniVZ9AInBKRNzvT02+CIeIuI2WLpgf+xBjyTWbQSJBDGMxrPcJMiE3UzufMSpmE7ooWTTw5b6B8SumvkbER7Iqu1Ms1VrV7lnyeKe+9mwmc8SYtGdCTu8k3/5l3d3++CTE09Od4fXTIGmxrrCUUp7cueLkQm2nEpdGj93Q+hgU21kSAhpNupsdseeKz2SKT6skwnCi0C7HPu0qX7B5qteqtEbgsBnGV9K+lHAuH6psksLDO9g1w6ipCZJwL8L1vOCMHVSt3urvYBc52Ms2lh7rO0iPj0TvF/qUncORlneL5HJcInAAHecV9A2UCuahMtqgFBUeD+3FxmmF+h+p2t0fo1m4s+/yUMtECMjfqQdM6CgxVHCqg/JoRccQHkexwSwnkT7RvJ8HhtLsd/GyTCdcVCTQNgb+JtL02GAvOmI5+1sl+gew0WTSoIMexivSJ3Y1yFuLI2fOTJh5K20BzEaBY97JdFcgvh3DzxlvUaL7DgAHWUbeGMyY+fO8="
+
+
+before_install:
+  - sudo service postgresql stop && sudo service postgresql start $POSTGRESQL_VERSION
 
 install:
   - pip install -r requirements.txt
