@@ -148,6 +148,8 @@ class MultipleInheritance:
         queries.append(self.__extras())
 
         for sql in queries:
+            if not sql:
+                continue
             try:
                 if self.variables:
                     self.cursor.execute(sql, self.variables)
@@ -471,6 +473,6 @@ CREATE TRIGGER tr_{vn}_on_delete
             sql += "ALTER VIEW {vs}.{vn} ALTER {master_pkey} SET DEFAULT {dv};"\
                 .format(vs=self.view_schema,
                         vn=self.view_name,
-                        rpk=self.child_pkey,
+                        master_pkey=self.master_pkey,
                         dv=default_value(self.cursor, self.master_schema, self.master_table, self.master_pkey))
         return sql
