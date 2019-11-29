@@ -4,7 +4,7 @@ import os
 import psycopg2
 import psycopg2.extras
 
-from pirogue.utils import table_parts, select_columns, insert_command, update_command
+from pirogue.utils import table_parts, select_columns, insert_command, update_command, default_value
 from pirogue.information_schema import reference_columns, primary_key, columns, geometry_type
 from pirogue.exceptions import TableHasNoPrimaryKey, VariableError, InvalidDefinition
 from pirogue.single_inheritance import SingleInheritance
@@ -56,7 +56,8 @@ class MultipleInheritance:
                            'insert_trigger', 'update_trigger',
                            'allow_type_change', 'allow_parent_only',
                            'additional_columns', 'additional_joins',
-                           'merge_columns', 'merge_geometry_columns'):
+                           'merge_columns', 'merge_geometry_columns',
+                           'pkey_default_value'):
                 raise InvalidDefinition('key {k} is not a valid'.format(k=key))
         # check joins validity
         for alias, table_def in definition['joins'].items():
@@ -78,6 +79,7 @@ class MultipleInheritance:
         self.master_skip_colums = definition.get('skip_columns', [])
         self.master_prefix = definition.get('prefix', None)
         self.master_remap_columns = definition.get('remap_columns', {})
+        self.pkey_default_value = definition.get('pkey_default_value', False)
 
         # global options:
         self.view_schema = definition.get('view_schema', self.master_schema)
@@ -143,6 +145,7 @@ class MultipleInheritance:
         queries.append(self.__insert_trigger())
         queries.append(self.__update_trigger())
         queries.append(self.__delete_trigger())
+        queries.append(self.__extras())
 
         for sql in queries:
             try:
@@ -460,4 +463,14 @@ CREATE TRIGGER tr_{vn}_on_delete
            tn=self.master_table,
            mpk=self.master_pkey,
            vs=self.view_schema)
+        return sql
+
+    def __extras(self):
+        sql = ''
+        if self.pkey_default_value:
+            sql += "ALTER VIEW {vs}.{vn} ALTER {master_pkey} SET DEFAULT {dv};"\
+                .format(vs=self.view_schema,
+                        vn=self.view_name,
+                        rpk=self.child_pkey,
+                        dv=default_value(self.cursor, self.master_schema, self.master_table, self.master_pkey))
         return sql

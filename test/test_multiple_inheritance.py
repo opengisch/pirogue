@@ -5,6 +5,7 @@ import yaml
 import psycopg2
 import psycopg2.extras
 from pirogue import MultipleInheritance
+from pirogue.utils import default_value
 from pirogue.exceptions import InvalidDefinition
 
 pg_service = 'pirogue_test'
@@ -69,6 +70,14 @@ class TestMultipleInheritance(unittest.TestCase):
         except InvalidDefinition:
             error_caught = True
             self.assertTrue(error_caught)
+
+    def test_pkey_default_value(self):
+        yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
+        yaml_definition['pkey_default_value'] = True
+        MultipleInheritance(yaml_definition, pg_service=pg_service).create()
+        self.assertEqual(default_value(self.cur, 'pirogue_test', 'animal', 'aid'), default_value(self.cur, 'pirogue_test', 'vw_merge_animal', 'aid'))
+
+
 
 
 if __name__ == '__main__':
