@@ -1,7 +1,7 @@
 from setuptools import setup
 import sys
 
-python_min_version = (3, 6)
+python_min_version = (3, 5)
 
 if sys.version_info < python_min_version:
     sys.exit('Pirogue requires at least Python version {vmaj}.{vmin}.\n'
