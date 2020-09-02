@@ -39,7 +39,9 @@ CREATE TABLE pirogue_test.dog (
 -- ref col has same name as parent pkey column
 CREATE TABLE pirogue_test.aardvark (
    	aid integer REFERENCES pirogue_test.animal,
-	father text);
+	father text
+	-- ! if adding new fields here, complete the list on test_multiple_inheritance.test_merge_no_columns ! --
+	);
 
 -- ref col is a serial key
 CREATE TABLE pirogue_test.eagle (

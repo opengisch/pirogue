@@ -77,6 +77,13 @@ class TestMultipleInheritance(unittest.TestCase):
         MultipleInheritance(yaml_definition, pg_service=pg_service).create()
         self.assertEqual(default_value(self.cur, 'pirogue_test', 'animal', 'aid'), default_value(self.cur, 'pirogue_test', 'vw_merge_animal', 'aid'))
 
+    def test_merge_no_columns(self):
+        yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
+        yaml_definition['joins']['aardvark']['skip_columns'] = ['aid', 'father']
+        MultipleInheritance(yaml_definition, pg_service=pg_service).create()
+
+
+
 
 
 
