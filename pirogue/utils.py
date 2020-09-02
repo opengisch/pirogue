@@ -172,6 +172,10 @@ def insert_command(pg_cur: cursor,
     if pkey and remove_pkey:
         cols.remove(pkey)
 
+    # if no columns, return NULL
+    if len([col for col in cols if col not in skip_columns]) == 0:
+        return "-- Do not insert for {} since all columns are skipped".format(table_name)
+
     if not pkey and coalesce_pkey_default:
         pkey = primary_key(pg_cur, table_schema, table_name)
 
