@@ -243,7 +243,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                   cast=self.merge_column_cast.get(col, '')
                                                   )
                                           for col in self.merge_columns]),
-           joined_columns=',\n    '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
+           joined_columns='\n    , '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
                                                      table_alias=table_def['short_alias'],
                                                      skip_columns=table_def.get('skip_columns', [])+[table_def['ref_master_key']],
                                                      safe_skip_columns=self.merge_columns,
