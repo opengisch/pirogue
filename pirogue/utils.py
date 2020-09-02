@@ -94,11 +94,16 @@ def select_columns(pg_cur: cursor,
 
     def print_comma(first_column_printed, print: bool) -> str:
         if first_column_printed[0]:
+            # we can print in any case
             return ', '
         elif print:
-            first_column_printed[0] = True
-            return ', '
-        return ''
+            # we start printing commas (i.e. not commenting anymore)
+            if not first_column_printed[0]:
+                # this is the first column to be printed => no comma
+                first_column_printed[0] = True
+                return ''
+            else:
+                return ', '
 
     return '\n{indent}'\
         .format(indent=indent*' ')\
