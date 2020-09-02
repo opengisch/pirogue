@@ -108,14 +108,14 @@ class SimpleJoins:
         """
         sql = """
 CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
-  {parent_cols},
-  {child_cols}
+  {parent_cols}
+  , {child_cols}
   FROM {ps}.{pt}
   {joins};
 """.format(vs=self.view_schema,
            vn=self.view_name,
            parent_cols=select_columns(self.cursor, self.parent_schema, self.parent_table, table_alias=self.parent_table, remove_pkey=False),
-           child_cols=',\n  '.join([select_columns(self.cursor, child_def.schema_name, child_def.table_name,
+           child_cols='\n  , '.join([select_columns(self.cursor, child_def.schema_name, child_def.table_name,
                                                    table_alias=alias, remap_columns=child_def.remap_columns,
                                                    prefix=child_def.prefix)
                                     for alias, child_def in self.child_tables.items()]),
