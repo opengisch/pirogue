@@ -1,7 +1,11 @@
-pirogue.information\_schema
+﻿pirogue.information\_schema
 ===========================
 
 .. automodule:: pirogue.information_schema
+
+   
+   
+   
 
    
    
@@ -24,3 +28,6 @@ pirogue.information\_schema
    
    
    
+
+
+

@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,27 +11,29 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="pirogue.SimpleJoins" href="pirogue.SimpleJoins.html" />
@@ -50,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pirogue
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pirogue
           
 
           
@@ -73,6 +74,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -92,6 +94,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -130,7 +133,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
       <li>pirogue.MultipleInheritance</li>
     
@@ -153,14 +156,13 @@
             
   <div class="section" id="pirogue-multipleinheritance">
 <h1>pirogue.MultipleInheritance<a class="headerlink" href="#pirogue-multipleinheritance" title="Permalink to this headline">¶</a></h1>
-<dl class="class">
+<dl class="py class">
 <dt id="pirogue.MultipleInheritance">
-<em class="property">class </em><code class="sig-prename descclassname">pirogue.</code><code class="sig-name descname">MultipleInheritance</code><span class="sig-paren">(</span><em class="sig-param">definition: dict</em>, <em class="sig-param">pg_service: str = None</em>, <em class="sig-param">variables: dict = {}</em>, <em class="sig-param">create_joins: bool = False</em>, <em class="sig-param">drop: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pirogue/multiple_inheritance.html#MultipleInheritance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.MultipleInheritance" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Creates a view for multiple inheritance objects with associated triggers to edit data.</p>
-<dl class="method">
+<em class="property">class </em><code class="sig-prename descclassname">pirogue.</code><code class="sig-name descname">MultipleInheritance</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">definition</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">pg_service</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">variables</span><span class="p">:</span> <span class="n">dict</span> <span class="o">=</span> <span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">create_joins</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">False</span></em>, <em class="sig-param"><span class="n">drop</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pirogue/multiple_inheritance.html#MultipleInheritance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.MultipleInheritance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a view for multiple inheritance objects with associated triggers to edit data.</p>
+<dl class="py method">
 <dt id="pirogue.MultipleInheritance.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">definition: dict</em>, <em class="sig-param">pg_service: str = None</em>, <em class="sig-param">variables: dict = {}</em>, <em class="sig-param">create_joins: bool = False</em>, <em class="sig-param">drop: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pirogue/multiple_inheritance.html#MultipleInheritance.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.MultipleInheritance.__init__" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">definition</span><span class="p">:</span> <span class="n">dict</span></em>, <em class="sig-param"><span class="n">pg_service</span><span class="p">:</span> <span class="n">str</span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">variables</span><span class="p">:</span> <span class="n">dict</span> <span class="o">=</span> <span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">create_joins</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">False</span></em>, <em class="sig-param"><span class="n">drop</span><span class="p">:</span> <span class="n">bool</span> <span class="o">=</span> <span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pirogue/multiple_inheritance.html#MultipleInheritance.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.MultipleInheritance.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Produces the SQL code of the join table and triggers</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -185,18 +187,11 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.MultipleInheritance.__init__" title="pirogue.MultipleInheritance.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(definition[, pg_service, …])</p></td>
 <td><p>Produces the SQL code of the join table and triggers</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pirogue.MultipleInheritance.create" title="pirogue.MultipleInheritance.create"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create</span></code></a>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">create</span></code>()</p></td>
 <td><p>Creates the merge view on the specified service Returns True in case of success</p></td>
 </tr>
 </tbody>
 </table>
-<dl class="method">
-<dt id="pirogue.MultipleInheritance.create">
-<code class="sig-name descname">create</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="../_modules/pirogue/multiple_inheritance.html#MultipleInheritance.create"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.MultipleInheritance.create" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates the merge view on the specified service
-Returns True in case of success</p>
-</dd></dl>
-
 </dd></dl>
 
 </div>
@@ -221,11 +216,19 @@ Returns True in case of success</p>
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2019, Denis Rouzaud
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -236,7 +239,6 @@ Returns True in case of success</p>
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

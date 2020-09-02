@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,27 +11,29 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="prev" title="pirogue.utils" href="pirogue.utils.html" /> 
@@ -49,7 +50,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pirogue
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pirogue
           
 
           
@@ -72,6 +73,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -91,6 +93,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -129,7 +132,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
       <li>pirogue.exceptions</li>
     
@@ -159,62 +162,26 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.exceptions.InvalidColumn" title="pirogue.exceptions.InvalidColumn"><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidColumn</span></code></a></p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidColumn</span></code></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pirogue.exceptions.InvalidDefinition" title="pirogue.exceptions.InvalidDefinition"><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidDefinition</span></code></a></p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidDefinition</span></code></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.exceptions.InvalidSkipColumns" title="pirogue.exceptions.InvalidSkipColumns"><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidSkipColumns</span></code></a></p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">InvalidSkipColumns</span></code></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pirogue.exceptions.NoReferenceFound" title="pirogue.exceptions.NoReferenceFound"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NoReferenceFound</span></code></a></p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">NoReferenceFound</span></code></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.exceptions.TableHasNoPrimaryKey" title="pirogue.exceptions.TableHasNoPrimaryKey"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TableHasNoPrimaryKey</span></code></a></p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TableHasNoPrimaryKey</span></code></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pirogue.exceptions.VariableError" title="pirogue.exceptions.VariableError"><code class="xref py py-obj docutils literal notranslate"><span class="pre">VariableError</span></code></a></p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VariableError</span></code></p></td>
 <td><p></p></td>
 </tr>
 </tbody>
 </table>
-<dl class="exception">
-<dt id="pirogue.exceptions.InvalidColumn">
-<em class="property">exception </em><code class="sig-prename descclassname">pirogue.exceptions.</code><code class="sig-name descname">InvalidColumn</code><a class="reference internal" href="../_modules/pirogue/exceptions.html#InvalidColumn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.exceptions.InvalidColumn" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
-</dd></dl>
-
-<dl class="exception">
-<dt id="pirogue.exceptions.InvalidDefinition">
-<em class="property">exception </em><code class="sig-prename descclassname">pirogue.exceptions.</code><code class="sig-name descname">InvalidDefinition</code><a class="reference internal" href="../_modules/pirogue/exceptions.html#InvalidDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.exceptions.InvalidDefinition" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
-</dd></dl>
-
-<dl class="exception">
-<dt id="pirogue.exceptions.InvalidSkipColumns">
-<em class="property">exception </em><code class="sig-prename descclassname">pirogue.exceptions.</code><code class="sig-name descname">InvalidSkipColumns</code><a class="reference internal" href="../_modules/pirogue/exceptions.html#InvalidSkipColumns"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.exceptions.InvalidSkipColumns" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
-</dd></dl>
-
-<dl class="exception">
-<dt id="pirogue.exceptions.NoReferenceFound">
-<em class="property">exception </em><code class="sig-prename descclassname">pirogue.exceptions.</code><code class="sig-name descname">NoReferenceFound</code><a class="reference internal" href="../_modules/pirogue/exceptions.html#NoReferenceFound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.exceptions.NoReferenceFound" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
-</dd></dl>
-
-<dl class="exception">
-<dt id="pirogue.exceptions.TableHasNoPrimaryKey">
-<em class="property">exception </em><code class="sig-prename descclassname">pirogue.exceptions.</code><code class="sig-name descname">TableHasNoPrimaryKey</code><a class="reference internal" href="../_modules/pirogue/exceptions.html#TableHasNoPrimaryKey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.exceptions.TableHasNoPrimaryKey" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
-</dd></dl>
-
-<dl class="exception">
-<dt id="pirogue.exceptions.VariableError">
-<em class="property">exception </em><code class="sig-prename descclassname">pirogue.exceptions.</code><code class="sig-name descname">VariableError</code><a class="reference internal" href="../_modules/pirogue/exceptions.html#VariableError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.exceptions.VariableError" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
-</dd></dl>
-
 </div>
 
 
@@ -235,11 +202,19 @@
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2019, Denis Rouzaud
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -250,7 +225,6 @@
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

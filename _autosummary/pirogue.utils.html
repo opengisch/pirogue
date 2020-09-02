@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,27 +11,29 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="pirogue.exceptions" href="pirogue.exceptions.html" />
@@ -50,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pirogue
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pirogue
           
 
           
@@ -73,6 +74,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -92,6 +94,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -130,7 +133,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
       <li>pirogue.utils</li>
     
@@ -160,7 +163,7 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.utils.insert_command" title="pirogue.utils.insert_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">insert_command</span></code></a>(pg_cur, table_schema, table_name)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">insert_command</span></code>(pg_cur, table_schema, table_name)</p></td>
 <td><p><dl class="field-list simple">
 <dt class="field-odd">param pg_cur</dt>
 <dd class="field-odd"><p>the psycopg cursor</p>
@@ -168,110 +171,17 @@
 </dl>
 </p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pirogue.utils.select_columns" title="pirogue.utils.select_columns"><code class="xref py py-obj docutils literal notranslate"><span class="pre">select_columns</span></code></a>(pg_cur, table_schema, table_name)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">select_columns</span></code>(pg_cur, table_schema, table_name)</p></td>
 <td><p>Returns the list of columns to be used in a SELECT command</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.utils.table_parts" title="pirogue.utils.table_parts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">table_parts</span></code></a>(name)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">table_parts</span></code>(name)</p></td>
 <td><p>Returns a tuple with schema and table names</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pirogue.utils.update_command" title="pirogue.utils.update_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_command</span></code></a>(pg_cur, table_schema, table_name)</p></td>
-<td><p>Creates an UPDATE command :param pg_cur: the psycopg cursor :param table_schema: the schema :param table_name: the name of the table :param table_type: the type of table, i.e.</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_command</span></code>(pg_cur, table_schema, table_name)</p></td>
+<td><p>Creates an UPDATE command :param pg_cur: the psycopg cursor :param table_schema: the schema :param table_name: the name of the table :param table_type: the type of table, i.e. view or table :param remove_pkey: if True, the primary key will also be updated :param pkey: can be manually specified.</p></td>
 </tr>
 </tbody>
 </table>
-<dl class="function">
-<dt id="pirogue.utils.insert_command">
-<code class="sig-prename descclassname">pirogue.utils.</code><code class="sig-name descname">insert_command</code><span class="sig-paren">(</span><em class="sig-param">pg_cur: psycopg2.extensions.cursor</em>, <em class="sig-param">table_schema: str</em>, <em class="sig-param">table_name: str</em>, <em class="sig-param">table_type: str = 'table'</em>, <em class="sig-param">table_alias: str = None</em>, <em class="sig-param">remove_pkey: bool = True</em>, <em class="sig-param">pkey: str = None</em>, <em class="sig-param">coalesce_pkey_default: bool = False</em>, <em class="sig-param">skip_columns: list = []</em>, <em class="sig-param">comment_skipped: bool = True</em>, <em class="sig-param">remap_columns: dict = {}</em>, <em class="sig-param">insert_values: dict = {}</em>, <em class="sig-param">columns_on_top: list = []</em>, <em class="sig-param">columns_at_end: list = []</em>, <em class="sig-param">prefix: str = None</em>, <em class="sig-param">returning: str = None</em>, <em class="sig-param">indent: int = 2</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../_modules/pirogue/utils.html#insert_command"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.utils.insert_command" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pg_cur</strong> – the psycopg cursor</p></li>
-<li><p><strong>table_schema</strong> – the schema</p></li>
-<li><p><strong>table_name</strong> – the name of the table</p></li>
-<li><p><strong>table_type</strong> – the type of table, i.e. view or table</p></li>
-<li><p><strong>table_alias</strong> – the alias of the table</p></li>
-<li><p><strong>remove_pkey</strong> – if True, the primary is removed from the list</p></li>
-<li><p><strong>pkey</strong> – can be manually specified.</p></li>
-<li><p><strong>coalesce_pkey_default</strong> – if True, the following expression is used to insert the primary key: COALESCE( NEW.{pkey}, {default_value} )</p></li>
-<li><p><strong>skip_columns</strong> – list of columns to be skipped</p></li>
-<li><p><strong>comment_skipped</strong> – if True, skipped columns are written but commented, otherwise they are not written</p></li>
-<li><p><strong>remap_columns</strong> – dictionary to remap columns</p></li>
-<li><p><strong>insert_values</strong> – dictionary of expression to be used at insert</p></li>
-<li><p><strong>columns_on_top</strong> – bring the columns to the front of the list</p></li>
-<li><p><strong>columns_at_end</strong> – bring the columns to the end of the list</p></li>
-<li><p><strong>prefix</strong> – add a prefix to the columns (do not applied to remapped columns)</p></li>
-<li><p><strong>returning</strong> – returning command</p></li>
-<li><p><strong>indent</strong> – add an indent in front</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="pirogue.utils.select_columns">
-<code class="sig-prename descclassname">pirogue.utils.</code><code class="sig-name descname">select_columns</code><span class="sig-paren">(</span><em class="sig-param">pg_cur: psycopg2.extensions.cursor</em>, <em class="sig-param">table_schema: str</em>, <em class="sig-param">table_name: str</em>, <em class="sig-param">table_type: str = 'table'</em>, <em class="sig-param">table_alias: str = None</em>, <em class="sig-param">remove_pkey: bool = False</em>, <em class="sig-param">skip_columns: list = []</em>, <em class="sig-param">safe_skip_columns: list = []</em>, <em class="sig-param">columns_list: list = None</em>, <em class="sig-param">comment_skipped: bool = True</em>, <em class="sig-param">remap_columns: dict = {}</em>, <em class="sig-param">columns_on_top: list = []</em>, <em class="sig-param">columns_at_end: list = []</em>, <em class="sig-param">prefix: str = None</em>, <em class="sig-param">indent: int = 2</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../_modules/pirogue/utils.html#select_columns"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.utils.select_columns" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the list of columns to be used in a SELECT command</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pg_cur</strong> – the psycopg cursor</p></li>
-<li><p><strong>table_schema</strong> – the schema</p></li>
-<li><p><strong>table_name</strong> – the name of the table</p></li>
-<li><p><strong>table_type</strong> – the type of table, i.e. view or table</p></li>
-<li><p><strong>table_alias</strong> – if not specified, table is used</p></li>
-<li><p><strong>remove_pkey</strong> – if True, the primary is removed from the list</p></li>
-<li><p><strong>skip_columns</strong> – list of columns to be skipped, raise an exception if the column does not exist</p></li>
-<li><p><strong>safe_skip_columns</strong> – list of columns to be skipped, do not raise exception if column does not exist</p></li>
-<li><p><strong>columns_list</strong> – if given use as list of columns</p></li>
-<li><p><strong>comment_skipped</strong> – if True, skipped columns are written but commented, otherwise they are not written
-If remove_pkey is True, the primary key will not be printed</p></li>
-<li><p><strong>remap_columns</strong> – dictionary to remap columns</p></li>
-<li><p><strong>columns_on_top</strong> – bring the columns to the front of the list</p></li>
-<li><p><strong>columns_at_end</strong> – bring the columns to the end of the list</p></li>
-<li><p><strong>prefix</strong> – add a prefix to the columns (do not applied to remapped columns)</p></li>
-<li><p><strong>indent</strong> – add an indent in front</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="pirogue.utils.table_parts">
-<code class="sig-prename descclassname">pirogue.utils.</code><code class="sig-name descname">table_parts</code><span class="sig-paren">(</span><em class="sig-param">name: str) -&gt; (&lt;class 'str'&gt;</em>, <em class="sig-param">&lt;class 'str'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pirogue/utils.html#table_parts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.utils.table_parts" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a tuple with schema and table names</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>name</strong> – the schema specified name of the table or view.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="pirogue.utils.update_command">
-<code class="sig-prename descclassname">pirogue.utils.</code><code class="sig-name descname">update_command</code><span class="sig-paren">(</span><em class="sig-param">pg_cur: psycopg2.extensions.cursor</em>, <em class="sig-param">table_schema: str</em>, <em class="sig-param">table_name: str</em>, <em class="sig-param">table_alias: str = None</em>, <em class="sig-param">table_type: str = 'table'</em>, <em class="sig-param">remove_pkey: bool = True</em>, <em class="sig-param">pkey: str = None</em>, <em class="sig-param">skip_columns: list = []</em>, <em class="sig-param">comment_skipped: bool = True</em>, <em class="sig-param">remap_columns: dict = {}</em>, <em class="sig-param">update_values: dict = {}</em>, <em class="sig-param">columns_on_top: list = []</em>, <em class="sig-param">columns_at_end: list = []</em>, <em class="sig-param">prefix: str = None</em>, <em class="sig-param">where_clause: str = None</em>, <em class="sig-param">indent: int = 2</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../_modules/pirogue/utils.html#update_command"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.utils.update_command" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates an UPDATE command
-:param pg_cur: the psycopg cursor
-:param table_schema: the schema
-:param table_name: the name of the table
-:param table_type: the type of table, i.e. view or table
-:param remove_pkey: if True, the primary key will also be updated
-:param pkey: can be manually specified.
-:param table_alias: if not specified, table is used
-:param skip_columns: list of columns to be skipped
-:param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
-:param remap_columns: dictionary to remap columns
-:param update_values: dictionary of expression to be used at insert
-:param columns_on_top: bring the columns to the front of the list
-:param columns_at_end: bring the columns to the end of the list
-:param prefix: add a prefix to the columns (do not applied to remapped columns)
-:param where_clause: can be manually specified
-:param indent: add an indent in front
-:return: the SQL command</p>
-</dd></dl>
-
 </div>
 
 
@@ -294,11 +204,19 @@ If remove_pkey is True, the primary key will not be printed</p></li>
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2019, Denis Rouzaud
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -309,7 +227,6 @@ If remove_pkey is True, the primary key will not be printed</p></li>
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

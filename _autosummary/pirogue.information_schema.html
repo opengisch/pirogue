@@ -1,8 +1,7 @@
 
 
 <!DOCTYPE html>
-<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -12,27 +11,29 @@
   
 
   
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
   
   
   
 
   
-  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
     
-
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="pirogue.utils" href="pirogue.utils.html" />
@@ -50,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> pirogue
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pirogue
           
 
           
@@ -73,6 +74,7 @@
           
         </div>
 
+        
         <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
             
@@ -92,6 +94,7 @@
             
           
         </div>
+        
       </div>
     </nav>
 
@@ -130,7 +133,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../index.html">Docs</a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
       <li>pirogue.information_schema</li>
     
@@ -160,105 +163,23 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.information_schema.columns" title="pirogue.information_schema.columns"><code class="xref py py-obj docutils literal notranslate"><span class="pre">columns</span></code></a>(pg_cur, table_schema, table_name[, …])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">columns</span></code>(pg_cur, table_schema, table_name[, …])</p></td>
 <td><p>Returns the list of columns of a table</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pirogue.information_schema.default_value" title="pirogue.information_schema.default_value"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_value</span></code></a>(pg_cur, table_schema, …)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_value</span></code>(pg_cur, table_schema, …)</p></td>
 <td><p>Returns the default value of the column</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.information_schema.geometry_type" title="pirogue.information_schema.geometry_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">geometry_type</span></code></a>(pg_cur, table_schema, table_name)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">geometry_type</span></code>(pg_cur, table_schema, table_name)</p></td>
 <td><p>Returns the geometry type of a column as a tuple (type, srid)</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pirogue.information_schema.primary_key" title="pirogue.information_schema.primary_key"><code class="xref py py-obj docutils literal notranslate"><span class="pre">primary_key</span></code></a>(pg_cur, schema_name, table_name)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">primary_key</span></code>(pg_cur, schema_name, table_name)</p></td>
 <td><p>Returns the primary of a table</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pirogue.information_schema.reference_columns" title="pirogue.information_schema.reference_columns"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reference_columns</span></code></a>(pg_cur, table_schema, …)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reference_columns</span></code>(pg_cur, table_schema, …)</p></td>
 <td><p>Returns the columns use in a reference constraint</p></td>
 </tr>
 </tbody>
 </table>
-<dl class="function">
-<dt id="pirogue.information_schema.columns">
-<code class="sig-prename descclassname">pirogue.information_schema.</code><code class="sig-name descname">columns</code><span class="sig-paren">(</span><em class="sig-param">pg_cur: psycopg2.extensions.cursor</em>, <em class="sig-param">table_schema: str</em>, <em class="sig-param">table_name: str</em>, <em class="sig-param">table_type: str = 'table'</em>, <em class="sig-param">remove_pkey: bool = False</em>, <em class="sig-param">skip_columns: list = []</em><span class="sig-paren">)</span> &#x2192; list<a class="reference internal" href="../_modules/pirogue/information_schema.html#columns"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.information_schema.columns" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the list of columns of a table</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pg_cur</strong> – psycopg cursor</p></li>
-<li><p><strong>table_schema</strong> – the table_schema</p></li>
-<li><p><strong>table_name</strong> – the table</p></li>
-<li><p><strong>table_type</strong> – the type of table, i.e. view or table</p></li>
-<li><p><strong>remove_pkey</strong> – if True, the primary key is dropped</p></li>
-<li><p><strong>skip_columns</strong> – list of columns to be skipped</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="pirogue.information_schema.default_value">
-<code class="sig-prename descclassname">pirogue.information_schema.</code><code class="sig-name descname">default_value</code><span class="sig-paren">(</span><em class="sig-param">pg_cur: psycopg2.extensions.cursor</em>, <em class="sig-param">table_schema: str</em>, <em class="sig-param">table_name: str</em>, <em class="sig-param">column: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../_modules/pirogue/information_schema.html#default_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.information_schema.default_value" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the default value of the column</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pg_cur</strong> – the psycopg cursor</p></li>
-<li><p><strong>table_schema</strong> – the table schema</p></li>
-<li><p><strong>table_name</strong> – the table name</p></li>
-<li><p><strong>column</strong> – the column name</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="pirogue.information_schema.geometry_type">
-<code class="sig-prename descclassname">pirogue.information_schema.</code><code class="sig-name descname">geometry_type</code><span class="sig-paren">(</span><em class="sig-param">pg_cur: psycopg2.extensions.cursor</em>, <em class="sig-param">table_schema: str</em>, <em class="sig-param">table_name: str</em>, <em class="sig-param">column: str = 'geometry') -&gt; (&lt;class 'str'&gt;</em>, <em class="sig-param">&lt;class 'int'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pirogue/information_schema.html#geometry_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.information_schema.geometry_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the geometry type of a column as a tuple (type, srid)</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pg_cur</strong> – the psycopg cursor</p></li>
-<li><p><strong>table_schema</strong> – the table schema</p></li>
-<li><p><strong>table_name</strong> – the table name</p></li>
-<li><p><strong>column</strong> – the geometry column name, defaults to “geometry”</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="pirogue.information_schema.primary_key">
-<code class="sig-prename descclassname">pirogue.information_schema.</code><code class="sig-name descname">primary_key</code><span class="sig-paren">(</span><em class="sig-param">pg_cur: psycopg2.extensions.cursor</em>, <em class="sig-param">schema_name: str</em>, <em class="sig-param">table_name: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../_modules/pirogue/information_schema.html#primary_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.information_schema.primary_key" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the primary of a table</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pg_cur</strong> – psycopg cursor</p></li>
-<li><p><strong>schema_name</strong> – the schema name</p></li>
-<li><p><strong>table_name</strong> – the table name</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="function">
-<dt id="pirogue.information_schema.reference_columns">
-<code class="sig-prename descclassname">pirogue.information_schema.</code><code class="sig-name descname">reference_columns</code><span class="sig-paren">(</span><em class="sig-param">pg_cur: psycopg2.extensions.cursor</em>, <em class="sig-param">table_schema: str</em>, <em class="sig-param">table_name: str</em>, <em class="sig-param">foreign_table_schema: str</em>, <em class="sig-param">foreign_table_name: str) -&gt; (&lt;class 'str'&gt;</em>, <em class="sig-param">&lt;class 'str'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pirogue/information_schema.html#reference_columns"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pirogue.information_schema.reference_columns" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the columns use in a reference constraint</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>pg_cur</strong> – the psycopg cursor</p></li>
-<li><p><strong>table_schema</strong> – the table schema</p></li>
-<li><p><strong>table_name</strong> – the table name</p></li>
-<li><p><strong>foreign_table_schema</strong> – the schema of the foreign table</p></li>
-<li><p><strong>foreign_table_name</strong> – the name of the foreign table</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
 </div>
 
 
@@ -281,11 +202,19 @@
 
   <div role="contentinfo">
     <p>
+        
         &copy; Copyright 2019, Denis Rouzaud
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -296,7 +225,6 @@
 
   </div>
   
-
 
   <script type="text/javascript">
       jQuery(function () {

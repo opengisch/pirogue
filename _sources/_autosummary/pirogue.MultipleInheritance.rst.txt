@@ -1,4 +1,4 @@
-pirogue.MultipleInheritance
+﻿pirogue.MultipleInheritance
 ===========================
 
 .. currentmodule:: pirogue

@@ -1,4 +1,4 @@
-pirogue.SimpleJoins
+﻿pirogue.SimpleJoins
 ===================
 
 .. currentmodule:: pirogue

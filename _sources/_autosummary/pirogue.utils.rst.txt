@@ -1,7 +1,11 @@
-pirogue.utils
+﻿pirogue.utils
 =============
 
 .. automodule:: pirogue.utils
+
+   
+   
+   
 
    
    
@@ -23,3 +27,6 @@ pirogue.utils
    
    
    
+
+
+

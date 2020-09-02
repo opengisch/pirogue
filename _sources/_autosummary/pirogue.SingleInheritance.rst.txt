@@ -1,4 +1,4 @@
-pirogue.SingleInheritance
+﻿pirogue.SingleInheritance
 =========================
 
 .. currentmodule:: pirogue

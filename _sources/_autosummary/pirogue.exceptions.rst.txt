@@ -1,7 +1,11 @@
-pirogue.exceptions
+﻿pirogue.exceptions
 ==================
 
 .. automodule:: pirogue.exceptions
+
+   
+   
+   
 
    
    
@@ -25,3 +29,6 @@ pirogue.exceptions
       VariableError
    
    
+
+
+
