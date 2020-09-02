@@ -209,7 +209,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
     CASE
       {types}
       ELSE {no_subtype}
-    END AS {type_name},
+    END AS {type_name}
     {master_columns}{merge_columns}
     {joined_columns}{additional_columns}
   FROM {mt}.{ms} {sa}
@@ -228,21 +228,22 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                          skip_columns=self.master_skip_colums,
                                          prefix=self.master_prefix,
                                          remap_columns=self.master_remap_columns,
-                                         indent=4),
-           merge_columns='\n      , '.join(['\n    CASE'
-                                          '\n      {conditions}'
-                                          '\n      ELSE NULL{cast}'
-                                          '\n    END AS {col}'
-                                          .format(col=col,
-                                                  conditions='\n      '.join(['WHEN {ta}.{rmk} IS NOT NULL THEN {ta}.{col}'
-                                                              .format(ta=table_def['short_alias'],
-                                                                      rmk=table_def['ref_master_key'],
-                                                                      col=col)
-                                                              for alias, table_def in self.joins.items()
-                                                              if col in columns(self.cursor, table_def['table_schema'], table_def['table_name'], skip_columns=table_def.get('skip_columns', []))]),
-                                                  cast=self.merge_column_cast.get(col, '')
-                                                  )
-                                          for col in self.merge_columns]),
+                                         indent=4,
+                                         separate_first=True),
+           merge_columns='\n      , '.join(['\n    , CASE'
+                                            '\n      {conditions}'
+                                            '\n      ELSE NULL{cast}'
+                                            '\n    END AS {col}'
+                                            .format(col=col,
+                                                    conditions='\n      '.join(['WHEN {ta}.{rmk} IS NOT NULL THEN {ta}.{col}'
+                                                                .format(ta=table_def['short_alias'],
+                                                                        rmk=table_def['ref_master_key'],
+                                                                        col=col)
+                                                                for alias, table_def in self.joins.items()
+                                                                if col in columns(self.cursor, table_def['table_schema'], table_def['table_name'], skip_columns=table_def.get('skip_columns', []))]),
+                                                    cast=self.merge_column_cast.get(col, '')
+                                                    )
+                                            for col in self.merge_columns]),
            joined_columns='\n    '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
                                                         table_alias=table_def['short_alias'],
                                                         skip_columns=table_def.get('skip_columns', [])+[table_def['ref_master_key']],
