@@ -210,7 +210,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
       {types}
       ELSE {no_subtype}
     END AS {type_name},
-    {master_columns},{merge_columns}
+    {master_columns}{merge_columns}
     {joined_columns}{additional_columns}
   FROM {mt}.{ms} {sa}
     {joined_tables}{additional_joins};        
@@ -229,10 +229,10 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                          prefix=self.master_prefix,
                                          remap_columns=self.master_remap_columns,
                                          indent=4),
-           merge_columns='\n      '.join(['\n    CASE'
+           merge_columns='\n      , '.join(['\n    CASE'
                                           '\n      {conditions}'
                                           '\n      ELSE NULL{cast}'
-                                          '\n    END AS {col},'
+                                          '\n    END AS {col}'
                                           .format(col=col,
                                                   conditions='\n      '.join(['WHEN {ta}.{rmk} IS NOT NULL THEN {ta}.{col}'
                                                               .format(ta=table_def['short_alias'],
@@ -243,15 +243,16 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                   cast=self.merge_column_cast.get(col, '')
                                                   )
                                           for col in self.merge_columns]),
-           joined_columns='\n    , '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
-                                                     table_alias=table_def['short_alias'],
-                                                     skip_columns=table_def.get('skip_columns', [])+[table_def['ref_master_key']],
-                                                     safe_skip_columns=self.merge_columns,
-                                                     prefix=table_def.get('prefix', None),
-                                                     remove_pkey=False,
-                                                     remap_columns=table_def.get('remap_columns', {}),
-                                                     indent=4)
-                                      for alias, table_def in self.joins.items()]),
+           joined_columns='\n    '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
+                                                        table_alias=table_def['short_alias'],
+                                                        skip_columns=table_def.get('skip_columns', [])+[table_def['ref_master_key']],
+                                                        safe_skip_columns=self.merge_columns,
+                                                        prefix=table_def.get('prefix', None),
+                                                        remove_pkey=False,
+                                                        remap_columns=table_def.get('remap_columns', {}),
+                                                        indent=4,
+                                                        separate_first=True)
+                                         for alias, table_def in self.joins.items()]),
            additional_columns=''.join([',\n    {cdef} AS {alias}'.format(cdef=cdef,alias=alias)
                                        for alias, cdef in self.additional_columns.items()]),
            mt=self.master_schema,
@@ -326,7 +327,7 @@ CREATE TRIGGER tr_{vn}_on_insert
                                                                                                  remap_columns=table_def.get('remap_columns', {}),
                                                                                                  remove_pkey=False,
                                                                                                  indent=4))
-                                   for alias, table_def in self.joins.items()]),
+                                      for alias, table_def in self.joins.items()]),
            raise_notice='NULL;' if self.allow_parent_only else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR"
                             .format(vn=self.view_name,
                                     percent_char='%%' if self.variables else '%',  # if variables, % should be escaped because cursor.execute is run with variables
