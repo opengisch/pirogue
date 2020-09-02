@@ -103,7 +103,7 @@ def select_columns(pg_cur: cursor,
     return '\n{indent}'\
         .format(indent=indent*' ')\
         .join(['{skip}{comma}{table_alias}.{column}{col_alias}'
-              .format(comma=print_comma(first_column_printed, col in skip_columns),
+              .format(comma=print_comma(first_column_printed, col not in skip_columns),
                       skip='-- ' if col in skip_columns else '',
                       table_alias=table_alias or table_name,
                       column=col,
