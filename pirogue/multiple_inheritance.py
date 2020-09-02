@@ -210,7 +210,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
       {types}
       ELSE {no_subtype}
     END AS {type_name},
-    {master_columns},{merge_columns}
+    {master_columns}{merge_columns}
     {joined_columns}{additional_columns}
   FROM {mt}.{ms} {sa}
     {joined_tables}{additional_joins};        
@@ -229,10 +229,10 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                          prefix=self.master_prefix,
                                          remap_columns=self.master_remap_columns,
                                          indent=4),
-           merge_columns='\n      '.join(['\n    CASE'
+           merge_columns='\n      , '.join(['\n    CASE'
                                           '\n      {conditions}'
                                           '\n      ELSE NULL{cast}'
-                                          '\n    END AS {col},'
+                                          '\n    END AS {col}'
                                           .format(col=col,
                                                   conditions='\n      '.join(['WHEN {ta}.{rmk} IS NOT NULL THEN {ta}.{col}'
                                                               .format(ta=table_def['short_alias'],
