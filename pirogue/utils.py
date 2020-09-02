@@ -90,10 +90,21 @@ def select_columns(pg_cur: cursor,
                 raise InvalidColumn('Invalid column in {param} paramater: "{tab}" has no column "{col}"'
                                     .format(param=param, tab=table_name, col=col))
 
-    return ',\n{indent}'\
+    first_column_printed = [False]
+
+    def print_comma(first_column_printed, print: bool) -> str:
+        if first_column_printed[0]:
+            return ', '
+        elif print:
+            first_column_printed[0] = True
+            return ', '
+        return ''
+
+    return '\n{indent}'\
         .format(indent=indent*' ')\
-        .join(['{skip}{table_alias}.{column}{col_alias}'
-              .format(skip='-- ' if col in skip_columns else '',
+        .join(['{skip}{comma}{table_alias}.{column}{col_alias}'
+              .format(comma=print_comma(first_column_printed, col in skip_columns),
+                      skip='-- ' if col in skip_columns else '',
                       table_alias=table_alias or table_name,
                       column=col,
                       col_alias=__column_alias(col, remap_columns=remap_columns, prefix=prefix, prepend_as=True))
