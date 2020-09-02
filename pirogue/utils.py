@@ -34,7 +34,8 @@ def select_columns(pg_cur: cursor,
                    columns_on_top: list = [],
                    columns_at_end: list = [],
                    prefix: str = None,
-                   indent: int = 2) -> str:
+                   indent: int = 2,
+                   separate_first: bool = False) -> str:
     """
     Returns the list of columns to be used in a SELECT command
 
@@ -71,6 +72,8 @@ def select_columns(pg_cur: cursor,
         add a prefix to the columns (do not applied to remapped columns)
     indent
         add an indent in front
+    separate_first
+        separate the first column with a comma
     """
     cols = sorted(columns_list or columns(pg_cur,
                                           table_schema=table_schema,
@@ -78,7 +81,7 @@ def select_columns(pg_cur: cursor,
                                           table_type=table_type,
                                           remove_pkey=remove_pkey),
                   key=lambda col: __column_priority(col))
-    cols=[col for col in cols if col not in safe_skip_columns]
+    cols = [col for col in cols if col not in safe_skip_columns]
 
     # check arguments
     for param, dict_or_list in {'skip_columns': skip_columns,
@@ -90,7 +93,7 @@ def select_columns(pg_cur: cursor,
                 raise InvalidColumn('Invalid column in {param} paramater: "{tab}" has no column "{col}"'
                                     .format(param=param, tab=table_name, col=col))
 
-    first_column_printed = [False]
+    first_column_printed = [separate_first]
 
     def print_comma(first_column_printed, print: bool) -> str:
         if first_column_printed[0]:

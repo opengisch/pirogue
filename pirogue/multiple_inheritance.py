@@ -243,15 +243,16 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                   cast=self.merge_column_cast.get(col, '')
                                                   )
                                           for col in self.merge_columns]),
-           joined_columns='\n    , '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
-                                                     table_alias=table_def['short_alias'],
-                                                     skip_columns=table_def.get('skip_columns', [])+[table_def['ref_master_key']],
-                                                     safe_skip_columns=self.merge_columns,
-                                                     prefix=table_def.get('prefix', None),
-                                                     remove_pkey=False,
-                                                     remap_columns=table_def.get('remap_columns', {}),
-                                                     indent=4)
-                                      for alias, table_def in self.joins.items()]),
+           joined_columns='\n    '.join([select_columns(self.cursor, table_def['table_schema'], table_def['table_name'],
+                                                        table_alias=table_def['short_alias'],
+                                                        skip_columns=table_def.get('skip_columns', [])+[table_def['ref_master_key']],
+                                                        safe_skip_columns=self.merge_columns,
+                                                        prefix=table_def.get('prefix', None),
+                                                        remove_pkey=False,
+                                                        remap_columns=table_def.get('remap_columns', {}),
+                                                        indent=4,
+                                                        separate_first=True)
+                                         for alias, table_def in self.joins.items()]),
            additional_columns=''.join([',\n    {cdef} AS {alias}'.format(cdef=cdef,alias=alias)
                                        for alias, cdef in self.additional_columns.items()]),
            mt=self.master_schema,
