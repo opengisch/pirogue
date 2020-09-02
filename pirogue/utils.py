@@ -104,6 +104,8 @@ def select_columns(pg_cur: cursor,
                 return ''
             else:
                 return ', '
+        else:
+            return ''
 
     return '\n{indent}'\
         .format(indent=indent*' ')\
