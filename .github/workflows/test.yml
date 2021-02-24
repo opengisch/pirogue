@@ -47,7 +47,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: 3.8
 
@@ -55,6 +55,15 @@ jobs:
       run: |
         pip install -r requirements.txt
         pip install -r test/requirements.txt
+
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ hashFiles('requirements.txt') }}-${{ hashFiles('test/requirements.txt') }}
+        restore-keys: |
+          pip-${{ hashFiles('requirements.txt') }}
+          pip-
 
     - name: Setup pirogue
       run: |
@@ -84,13 +93,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python 3.8
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: 3.8
     - name: Install requirements
       run: |
         pip install -r requirements.txt
         pip install -r docs/requirements.txt
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ hashFiles('requirements.txt') }}-${{ hashFiles('docs/requirements.txt') }}
+        restore-keys: |
+          pip-${{ hashFiles('requirements.txt') }}
+          pip-
     - name: Setup pirogue
       run: |
         VERSION=${GITHUB_REF:-0.0.0}
@@ -115,12 +132,19 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python 3.8
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: 3.8
     - name: Install requirements
       run: |
         pip install -r requirements.txt
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          pip-
     - name: Setup pirogue
       run: |
         VERSION=${GITHUB_REF:-0.0.0}
