@@ -141,25 +141,45 @@ def insert_command(pg_cur: cursor,
                    inner_defaults: dict = {}) -> str:
     """
     Creates an INSERT command
-    :param pg_cur: the psycopg cursor
-    :param table_schema: the schema
-    :param table_name: the name of the table
-    :param table_type: the type of table, i.e. view or table
-    :param table_alias: the alias of the table
-    :param remove_pkey: if True, the primary is removed from the list
-    :param pkey: can be manually specified.
-    :param coalesce_pkey_default: if True, the following expression is used to insert the primary key: COALESCE( NEW.{pkey}, {default_value} )
-    :param skip_columns: list of columns to be skipped
-    :param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
-    :param remap_columns: dictionary to remap columns
-    :param insert_values: dictionary of expression to be used at insert
-    :param columns_on_top: bring the columns to the front of the list
-    :param columns_at_end: bring the columns to the end of the list
-    :param prefix: add a prefix to the columns (do not applied to remapped columns)
-    :param returning: returning command
-    :param indent: add an indent in front
-    :param inner_defaults: dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)
-    :return:
+    
+    Parameters
+    ----------
+    pg_cur
+        the psycopg cursor
+    table_schema
+        the schema
+    table_name
+        the name of the table
+    table_type
+        the type of table, i.e. view or table
+    table_alias
+        the alias of the table
+    remove_pkey
+        if True, the primary is removed from the list
+    pkey
+         can be manually specified.
+    coalesce_pkey_default
+         if True, the following expression is used to insert the primary key: COALESCE( NEW.{pkey}, {default_value} )
+    skip_columns
+        list of columns to be skipped
+    comment_skipped
+        if True, skipped columns are written but commented, otherwise they are not written
+    remap_columns
+        dictionary to remap columns
+    insert_values
+        dictionary of expression to be used at insert
+    columns_on_top
+         bring the columns to the front of the list
+    columns_at_end
+        bring the columns to the end of the list
+    prefix
+        add a prefix to the columns (do not applied to remapped columns)
+    returning
+        returning command
+    indent add
+         an indent in front
+    inner_defaults
+        dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)
     """
     remove_pkey = remove_pkey and pkey is None
 
@@ -254,24 +274,47 @@ def update_command(pg_cur: cursor,
                    inner_defaults: dict = {}) -> str:
     """
     Creates an UPDATE command
-    :param pg_cur: the psycopg cursor
-    :param table_schema: the schema
-    :param table_name: the name of the table
-    :param table_type: the type of table, i.e. view or table
-    :param remove_pkey: if True, the primary key will also be updated
-    :param pkey: can be manually specified.
-    :param table_alias: if not specified, table is used
-    :param skip_columns: list of columns to be skipped
-    :param comment_skipped: if True, skipped columns are written but commented, otherwise they are not written
-    :param remap_columns: dictionary to remap columns
-    :param update_values: dictionary of expression to be used at insert
-    :param columns_on_top: bring the columns to the front of the list
-    :param columns_at_end: bring the columns to the end of the list
-    :param prefix: add a prefix to the columns (do not applied to remapped columns)
-    :param where_clause: can be manually specified
-    :param indent: add an indent in front
-    :param inner_defaults: dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)
-    :return: the SQL command
+
+    Parameters
+    ----------
+    pg_cur
+         the psycopg cursor
+    table_schema
+         the schema
+    table_name
+         the name of the table
+    table_type
+        the type of table, i.e. view or table
+    remove_pkey
+        if True, the primary key will also be updated
+    pkey
+        can be manually specified.
+    table_alias
+         if not specified, table is used
+    skip_columns
+        list of columns to be skipped
+    comment_skipped
+        if True, skipped columns are written but commented, otherwise they are not written
+    remap_columns
+        dictionary to remap columns
+    update_values
+        dictionary of expression to be used at insert
+    columns_on_top
+         bring the columns to the front of the list
+    columns_at_end
+         bring the columns to the end of the list
+    prefix
+        add a prefix to the columns (do not applied to remapped columns)
+    where_clause
+         can be manually specified
+    indent
+         add an indent in front
+    inner_defaults
+         dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)
+
+    Returns
+    -------
+    the SQL command
     """
 
     remove_pkey = remove_pkey and pkey is None and where_clause is None
@@ -349,10 +392,10 @@ def __column_alias(column: str,
                    prepend_as: bool = False) -> list:
     """
 
-    :param table_alias:
-    :param column:
-    :param field_if_no_alias: if True, return the field if the alias doesn't exist. If False return an empty string
-    :param prepend_as: prepend " AS " to the alias
+    table_alias
+    column
+    field_if_no_alias if True, return the field if the alias doesn't exist. If False return an empty string
+    prepend_as prepend " AS " to the alias
     :return: empty string if there is no alias and (i.e = field name)
     """
     col_alias = ''
@@ -379,8 +422,8 @@ def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list
 def __print_comma(next_comma_printed: list, is_skipped: bool) -> bool:
     """
     Determines if a comma should be printed
-    :param next_comma_printed: a list with a single boolean (works by reference)
-    :param is_skipped:
+    next_comma_printed a list with a single boolean (works by reference)
+    is_skipped
     :return:
     """
     if is_skipped:

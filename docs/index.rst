@@ -11,7 +11,10 @@ Welcome to pirogue's documentation!
     pirogue.MultipleInheritance
     pirogue.SimpleJoins
     pirogue.information_schema
+    pirogue.utils.table_parts
+    pirogue.utils.select_columns
     pirogue.utils.insert_command
+    pirogue.utils.update_command
     pirogue.exceptions
     scripts.pirogue.__main__
 
