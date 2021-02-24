@@ -124,7 +124,7 @@ def select_columns(pg_cur: cursor,
 def insert_command(pg_cur: cursor,
                    table_schema: str,
                    table_name: str,
-                   table_type: str = 'table',
+                   table_type: str = "table",
                    table_alias: str = None,
                    remove_pkey: bool = True,
                    pkey: str = None,
@@ -133,14 +133,14 @@ def insert_command(pg_cur: cursor,
                    comment_skipped: bool = True,
                    remap_columns: dict = {},
                    insert_values: dict = {},
-                   columns_on_top: list=[],
-                   columns_at_end: list=[],
+                   columns_on_top: list = [],
+                   columns_at_end: list = [],
                    prefix: str = None,
                    returning: str = None,
                    indent: int = 2,
                    inner_defaults: dict = {}) -> str:
     """
-
+    Creates an INSERT command
     :param pg_cur: the psycopg cursor
     :param table_schema: the schema
     :param table_name: the name of the table
