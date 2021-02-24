@@ -18,7 +18,8 @@ class SingleInheritance:
                  pg_service: str = None,
                  view_schema: str = None,
                  view_name: str = None,
-                 pkey_default_value: bool = False):
+                 pkey_default_value: bool = False,
+                 inner_defaults: dict = {}):
         """
         Produces the SQL code of the join table and triggers
 
@@ -36,6 +37,8 @@ class SingleInheritance:
             the name of the created view, defaults to vw_{parent_table}_{join_table}
         pkey_default_value
             the primary key column of the view will have a default value according to the child primary key table
+        inner_defaults
+            dictionary of other columns to default to in case the provided value is null or empty
         """
 
         if pg_service is None:
@@ -44,6 +47,7 @@ class SingleInheritance:
         self.cursor = self.conn.cursor()
 
         self.pkey_default_value = pkey_default_value
+        self.inner_defaults = inner_defaults
 
         (self.parent_schema, self.parent_table) = table_parts(parent_table)
         (self.child_schema, self.child_table) = table_parts(child_table)
@@ -145,6 +149,7 @@ CREATE TRIGGER tr_{vn}_on_insert
                                         remove_pkey=False,
                                         coalesce_pkey_default=True,
                                         remap_columns={self.parent_pkey: self.ref_parent_key},
+                                        inner_defaults=self.inner_defaults,
                                         returning='{ppk} INTO NEW.{prk}'.format(ppk=self.parent_pkey, prk=self.ref_parent_key)),
            insert_child=insert_command(self.cursor, self.child_schema, self.child_table,
                                        remove_pkey=False,
