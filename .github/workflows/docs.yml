@@ -11,7 +11,7 @@ jobs:
     name: Deploy documentation
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/master')
-    needs: ['test']
+
     steps:
     - uses: actions/checkout@v2
 
