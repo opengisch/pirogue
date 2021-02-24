@@ -16,7 +16,6 @@ jobs:
 
     strategy:
       matrix:
-        # tests run on 20.04 (Qt 5.12), compile test on 20.10 (Qt 5.14)
         pg-version: ['9.6', '10', '11']
       fail-fast: true
 
