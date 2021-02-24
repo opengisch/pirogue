@@ -40,7 +40,7 @@ jobs:
           - 5432:5432
 
     env:
-      PGUSER=postgres
+      PGUSER: postgres
 
     steps:
     - uses: actions/checkout@v2
