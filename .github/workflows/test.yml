@@ -57,16 +57,21 @@ jobs:
         pip install -r requirements.txt
 
     - name: Setup
-      run: |
-        sed -i "s/__VERSION__/${TRAVIS_TAG:-0.0.0}/g" setup.py
+      run:
+        VERSION=${GITHUB_REF:-0.0.0}
+        VERSION=${VERSION##*/}
+        sed -i "s/__VERSION__/${VERSION}/g" setup.py
         python setup.py install
+        pirogue -v
 
-    - name: Run tests
+
+    - name: Run bash tests
       run: |
         printf "[pirogue_test]\nhost=localhost\ndbname=pirogue_test_db\nuser=pirogue\npassword=1234\n\n" >> ~/.pg_service.conf
         ./test/test_simple_inheritance.sh
-        pirogue -v
-        nose2 -v
+
+    - name: Run Python tests
+      run: nose2 -v
 
   deploy:
     runs-on: ubuntu-latest
