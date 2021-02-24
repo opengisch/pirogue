@@ -43,7 +43,12 @@ jobs:
         pirogue -v
 
     - name: Build docs
-      run: ./docs/build_deploy.sh
+      run: |
+        VERSION=${GITHUB_REF:-0.0.0}
+        export VERSION=${VERSION##*/}
+        cd docs
+        sed -i "s/__VERSION__/${VERSION}/" conf.py
+        make html
 
     - name: Deploy to GitHub Pages
       run: |
