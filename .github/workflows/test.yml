@@ -81,6 +81,15 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/master')
     needs: ['test']
     steps:
+    - uses: actions/checkout@v2
+    - name: Setup pirogue
+      run: |
+        VERSION=${GITHUB_REF:-0.0.0}
+        VERSION=${VERSION##*/}
+        sed -i "s/__VERSION__/${VERSION}/g" setup.py
+        python setup.py install
+        pirogue -v
+
     - name: Build docs
       run: ./docs/build_deploy.sh
 
@@ -95,6 +104,14 @@ jobs:
     needs: ['test']
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
     steps:
+    - uses: actions/checkout@v2
+    - name: Setup pirogue
+      run: |
+        VERSION=${GITHUB_REF:-0.0.0}
+        VERSION=${VERSION##*/}
+        sed -i "s/__VERSION__/${VERSION}/g" setup.py
+        python setup.py install
+        pirogue -v
     - name: Deploy to PyPI
       uses: pypa/gh-action-pypi-publish@master
       with:
