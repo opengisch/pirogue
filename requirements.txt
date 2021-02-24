@@ -1,5 +1,2 @@
 psycopg2-binary
 pyyaml
-sphinx
-sphinx_rtd_theme
-nose2
