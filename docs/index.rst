@@ -11,7 +11,7 @@ Welcome to pirogue's documentation!
     pirogue.MultipleInheritance
     pirogue.SimpleJoins
     pirogue.information_schema
-    pirogue.utils
+    pirogue.utils.insert_command
     pirogue.exceptions
     scripts.pirogue.__main__
 
