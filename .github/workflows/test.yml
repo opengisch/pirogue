@@ -28,7 +28,9 @@ jobs:
         image: postgres:${{ matrix.pg-version }}
         # Provide the password for postgres
         env:
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: pirogue
+          POSTGRES_PASSWORD: 1234
+          POSTGRES_DB: pirogue_test_db
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
@@ -45,10 +47,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python 3.7
+    - name: Set up Python 3.8
       uses: actions/setup-python@v1
       with:
-        python-version: 3.7
+        python-version: 3.8
 
     - name: Install requirements
       run: |
@@ -61,11 +63,15 @@ jobs:
 
     - name: Run tests
       run: |
-        ./.ci/setup_db.sh
+        printf "[pirogue_test]\nhost=localhost\ndbname=pirogue_test_db\nuser=pirogue\npassword=1234\n\n" >> ~/.pg_service.conf
         ./test/test_simple_inheritance.sh
         pirogue -v
         nose2 -v
 
+  deploy:
+    runs-on: ubuntu-latest
+    depends: ['test']
+    steps:
     - name: Deploy to PyPI
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@master
