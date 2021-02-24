@@ -137,7 +137,8 @@ def insert_command(pg_cur: cursor,
                    columns_at_end: list=[],
                    prefix: str = None,
                    returning: str = None,
-                   indent: int = 2) -> str:
+                   indent: int = 2,
+                   inner_defaults: dict = {}) -> str:
     """
 
     :param pg_cur: the psycopg cursor
@@ -157,6 +158,7 @@ def insert_command(pg_cur: cursor,
     :param prefix: add a prefix to the columns (do not applied to remapped columns)
     :param returning: returning command
     :param indent: add an indent in front
+    :param inner_defaults: dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)
     :return:
     """
     remove_pkey = remove_pkey and pkey is None
@@ -197,6 +199,11 @@ def insert_command(pg_cur: cursor,
         if coalesce_pkey_default and col == pkey:
             return 'COALESCE( NEW.{cal}, {pk_def} )'.format(cal=cal,
                                                             pk_def=default_value(pg_cur, table_schema, table_name, pkey))
+        elif col in inner_defaults:
+            def_col = inner_defaults[col]
+            # we don't use COALESCE to deal with empt strings too
+            # we use recursion in case we need to call default to obj_id which may be calculated as just above
+            return 'CASE WHEN NEW.{cal} IS NOT NULL AND NEW.{cal}::text <> \'\' THEN NEW.{cal} ELSE {default} END'.format(cal=cal, default=value(def_col))
         else:
             return 'NEW.{cal}'.format(cal=cal)
 
@@ -243,7 +250,8 @@ def update_command(pg_cur: cursor,
                    columns_at_end: list=[],
                    prefix: str= None,
                    where_clause: str = None,
-                   indent: int=2) -> str:
+                   indent: int=2,
+                   inner_defaults: dict = {}) -> str:
     """
     Creates an UPDATE command
     :param pg_cur: the psycopg cursor
@@ -262,6 +270,7 @@ def update_command(pg_cur: cursor,
     :param prefix: add a prefix to the columns (do not applied to remapped columns)
     :param where_clause: can be manually specified
     :param indent: add an indent in front
+    :param inner_defaults: dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)
     :return: the SQL command
     """
 
@@ -297,6 +306,18 @@ def update_command(pg_cur: cursor,
 
     next_comma_printed = [False]
 
+    def value(col):
+        if col in update_values:
+            return update_values[col]
+        cal = __column_alias(col, remap_columns=remap_columns, prefix=prefix, field_if_no_alias=True)
+        if col in inner_defaults:
+            def_col = inner_defaults[col]
+            # we don't use COALESCE to deal with empt strings too
+            # we use recursion in case we need to call default to obj_id which may be calculated as just above
+            return 'CASE WHEN NEW.{cal} IS NOT NULL AND NEW.{cal}::text <> \'\' THEN NEW.{cal} ELSE {default} END'.format(cal=cal, default=value(def_col))
+        else:
+            return 'NEW.{cal}'.format(cal=cal)
+
     return """UPDATE {s}.{t}{a} SET
 {indent}    {cols}
 {indent}  WHERE {where_clause};"""\
@@ -311,11 +332,7 @@ def update_command(pg_cur: cursor,
                                         skip='-- ' if col in skip_columns else '',
                                         comma=', ' if __print_comma(next_comma_printed, col in skip_columns) else '',
                                         col=col,
-                                        new_col=update_values.get(col,
-                                                                  'NEW.{cal}'.format(cal=__column_alias(col,
-                                                                                                        remap_columns=remap_columns,
-                                                                                                        prefix=prefix,
-                                                                                                        field_if_no_alias=True))))
+                                        new_col=value(col))
                                 for col in cols if (comment_skipped or col not in skip_columns)]),
                 where_clause=where_clause or '{pkey} = {pkal}'.format(pkey=pkey,
                                                                       pkal=update_values.get(pkey,
