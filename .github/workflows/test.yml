@@ -18,7 +18,7 @@ jobs:
       matrix:
         # tests run on 20.04 (Qt 5.12), compile test on 20.10 (Qt 5.14)
         pg-version: ['9.6', '10', '11']
-      fail-fast: false
+      fail-fast: true
 
     # Service containers to run with `runner-job`
     services:
@@ -70,7 +70,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    depends: ['test']
+    needs: ['test']
     steps:
     - name: Deploy to PyPI
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
