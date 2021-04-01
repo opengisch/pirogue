@@ -2,10 +2,7 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - refs/tags/*   
-
+  release: published 
 
 jobs:
   release:
