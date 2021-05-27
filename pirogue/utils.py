@@ -410,7 +410,7 @@ def __column_alias(column: str,
     return col_alias
 
 
-def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[]) -> int:
+def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[]):
     if column in columns_on_top:
         return [0, column]
     elif column in columns_at_end:
