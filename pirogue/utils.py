@@ -80,7 +80,7 @@ def select_columns(pg_cur: cursor,
                                           table_name=table_name,
                                           table_type=table_type,
                                           remove_pkey=remove_pkey),
-                  key=lambda col: [__column_priority(col), col])
+                  key=lambda col: __column_priority(col))
     cols = [col for col in cols if col not in safe_skip_columns]
 
     # check arguments
@@ -412,11 +412,11 @@ def __column_alias(column: str,
 
 def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[]) -> int:
     if column in columns_on_top:
-        return 0
+        return [0, column]
     elif column in columns_at_end:
-        return 2
+        return [2, column]
     else:
-        return 1
+        return [1, column]
 
 
 def __print_comma(next_comma_printed: list, is_skipped: bool) -> bool:
