@@ -203,6 +203,8 @@ class MultipleInheritance:
         :return:
         """
 
+        sorted_joins = sorted(self.joins.items())
+
         sql = """
 CREATE OR REPLACE VIEW {vs}.{vn} AS
   SELECT
@@ -219,7 +221,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
            types='\n      '.join(["WHEN {shal}.{mrf} IS NOT NULL THEN '{al}'::{vs}.{tn}"
                                  .format(shal=table_def['short_alias'], mrf=table_def['ref_master_key'],
                                          al=alias, vs=self.view_schema, tn=self.type_name)
-                                  for alias, table_def in self.joins.items()]),
+                                  for alias, table_def in sorted_joins]),
            no_subtype="'{type}'::{vs}.{tn}".format(type=self.view_alias if self.allow_parent_only else 'unknown',
                                                    vs=self.view_schema, tn=self.type_name),
            type_name=self.type_name,
@@ -239,7 +241,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                                 .format(ta=table_def['short_alias'],
                                                                         rmk=table_def['ref_master_key'],
                                                                         col=col)
-                                                                for alias, table_def in self.joins.items()
+                                                                for alias, table_def in sorted_joins
                                                                 if col in columns(self.cursor, table_def['table_schema'], table_def['table_name'], skip_columns=table_def.get('skip_columns', []))]),
                                                     cast=self.merge_column_cast.get(col, '')
                                                     )
@@ -253,19 +255,19 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                                         remap_columns=table_def.get('remap_columns', {}),
                                                         indent=4,
                                                         separate_first=True)
-                                         for alias, table_def in self.joins.items()]),
+                                         for alias, table_def in sorted_joins]),
            additional_columns=''.join([',\n    {cdef} AS {alias}'.format(cdef=cdef,alias=alias)
                                        for alias, cdef in self.additional_columns.items()]),
            mt=self.master_schema,
            ms=self.master_table,
            sa=self.short_alias,
            joined_tables='\n    '.join(["LEFT JOIN {tbl} {tal} ON {tal}.{rmk} = {msa}.{mpk}"
-                                            .format(tbl=table_def['table'],
-                                                    tal=table_def['short_alias'],
-                                                    rmk=table_def['ref_master_key'],
+                                            .format(tbl=table_def[1]['table'],
+                                                    tal=table_def[1]['short_alias'],
+                                                    rmk=table_def[1]['ref_master_key'],
                                                     msa=self.short_alias,
                                                     mpk=self.master_pkey)
-                                            for table_def in self.joins.values()]),
+                                            for table_def in sorted_joins]),
            additional_joins='\n    {ad}'.format(ad=self.additional_joins) if self.additional_joins else ''
            )
         return sql
@@ -275,6 +277,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
 
         :return:
         """
+
+        sorted_joins = sorted(self.joins.items())
+
         sql = """-- INSERT TRIGGER
 CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_insert() RETURNS trigger AS
 $BODY$
@@ -328,7 +333,7 @@ CREATE TRIGGER tr_{vn}_on_insert
                                                                                                  remap_columns=table_def.get('remap_columns', {}),
                                                                                                  remove_pkey=False,
                                                                                                  indent=4))
-                                      for alias, table_def in self.joins.items()]),
+                                      for alias, table_def in sorted_joins]),
            raise_notice='NULL;' if self.allow_parent_only else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR"
                             .format(vn=self.view_name,
                                     percent_char='%%' if self.variables else '%',  # if variables, % should be escaped because cursor.execute is run with variables
@@ -338,6 +343,7 @@ CREATE TRIGGER tr_{vn}_on_insert
 
 
     def __update_trigger(self):
+        sorted_joins = sorted(self.joins.items())
         sql = """-- UPDATE TRIGGER
 CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_update() RETURNS trigger AS
 $BODY$
@@ -398,7 +404,7 @@ CREATE TRIGGER tr_{vn}_on_update
                                                                         tn=table_def['table_name'],
                                                                         rmk=table_def['ref_master_key'],
                                                                         mpk=self.master_pkey)
-                                                                for alias, table_def in self.joins.items()]),
+                                                                for alias, table_def in sorted_joins]),
                                        inserts='\n      '.join(["WHEN NEW.{type_name} = '{alias}'::{vs}.{type_name} "
                                                                 "THEN INSERT INTO {ts}.{tn} "
                                                                 "({rmk}) VALUES (OLD.{mpk});"
@@ -409,7 +415,7 @@ CREATE TRIGGER tr_{vn}_on_update
                                                                        tn=table_def['table_name'],
                                                                        rmk=table_def['ref_master_key'],
                                                                        mpk=self.master_pkey)
-                                                                for alias, table_def in self.joins.items()])),
+                                                                for alias, table_def in sorted_joins])),
                    update_joins='\n    '.join(["WHEN NEW.{type_name} = '{alias}'::{vs}.{type_name} THEN"
                                                "\n      {update_join}".format(type_name=self.type_name,
                                                                               alias=alias,
@@ -423,7 +429,7 @@ CREATE TRIGGER tr_{vn}_on_update
                                                                                                          update_values={**{table_def['pkey']: 'OLD.{c}'.format(c=self.master_pkey)},
                                                                                                                         **table_def.get('update_values', {})},
                                                                                                          indent=4))
-                                   for alias, table_def in self.joins.items()]),
+                                   for alias, table_def in sorted_joins]),
                    raise_notice='NULL;' if self.allow_parent_only
                                 else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR"
                                      .format(vn=self.view_name,
@@ -433,6 +439,7 @@ CREATE TRIGGER tr_{vn}_on_update
         return sql
 
     def __delete_trigger(self):
+        sorted_joins = sorted(self.joins.items())
         sql = """
 CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_delete() RETURNS trigger AS
     $BODY$
@@ -462,7 +469,7 @@ CREATE TRIGGER tr_{vn}_on_delete
                                            tn=table_def['table_name'],
                                            rmk=table_def['ref_master_key'],
                                            mpk=self.master_pkey)
-                                    for alias, table_def in self.joins.items()]),
+                                    for alias, table_def in sorted_joins]),
            ts=self.master_schema,
            tn=self.master_table,
            mpk=self.master_pkey,
