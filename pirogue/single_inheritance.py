@@ -130,7 +130,6 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
 CREATE OR REPLACE FUNCTION {vs}.ft_{vn}_insert() RETURNS trigger AS
 $BODY$
 BEGIN
-/* why not sorted ?! */
 {insert_parent}
 
 {insert_child}
