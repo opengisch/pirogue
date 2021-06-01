@@ -410,13 +410,16 @@ def __column_alias(column: str,
     return col_alias
 
 
-def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[]) -> int:
+def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[]):
+    """
+    Returns a value to sort columns first by priority (on top / at end), then alphabetically
+    """
     if column in columns_on_top:
-        return 0
+        return [0, column]
     elif column in columns_at_end:
-        return 2
+        return [2, column]
     else:
-        return 1
+        return [1, column]
 
 
 def __print_comma(next_comma_printed: list, is_skipped: bool) -> bool:
