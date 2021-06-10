@@ -414,6 +414,8 @@ def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list
     """
     Returns a value to sort columns first by priority (on top / at end), then alphabetically
     """
+    if column == 'obj_id':
+        return [-1, column]
     if column in columns_on_top:
         return [0, column]
     elif column in columns_at_end:
