@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from psycopg2.extensions import cursor
 
-from pirogue.exceptions import InvalidColumn
+from pirogue.exceptions import InvalidColumn, TableHasNoPrimaryKey
 from pirogue.information_schema import columns, primary_key, default_value
 
 
@@ -75,12 +75,16 @@ def select_columns(pg_cur: cursor,
     separate_first
         separate the first column with a comma
     """
+    try:
+        pk_for_sort = primary_key(pg_cur, table_schema, table_name)
+    except TableHasNoPrimaryKey:
+        pk_for_sort = None
     cols = sorted(columns_list or columns(pg_cur,
                                           table_schema=table_schema,
                                           table_name=table_name,
                                           table_type=table_type,
                                           remove_pkey=remove_pkey),
-                  key=lambda col: __column_priority(col))
+                  key=lambda col, pk_for_sort=pk_for_sort: __column_priority(col, primary_key=pk_for_sort))
     cols = [col for col in cols if col not in safe_skip_columns]
 
     # check arguments
@@ -184,12 +188,16 @@ def insert_command(pg_cur: cursor,
     remove_pkey = remove_pkey and pkey is None
 
     # get columns
+    try:
+        pk_for_sort = primary_key(pg_cur, table_schema, table_name)
+    except TableHasNoPrimaryKey:
+        pk_for_sort = None
     cols = sorted(columns(pg_cur,
                           table_schema=table_schema,
                           table_name=table_name,
                           table_type=table_type,
                           remove_pkey=remove_pkey),
-                  key=lambda col: __column_priority(col))
+                  key=lambda col, pk_for_sort=pk_for_sort: __column_priority(col, primary_key=pk_for_sort))
 
     if pkey and remove_pkey:
         cols.remove(pkey)
@@ -319,12 +327,16 @@ def update_command(pg_cur: cursor,
 
     remove_pkey = remove_pkey and pkey is None and where_clause is None
     # get columns
+    try:
+        pk_for_sort = primary_key(pg_cur, table_schema, table_name)
+    except TableHasNoPrimaryKey:
+        pk_for_sort = None
     cols = sorted(columns(pg_cur,
                           table_schema=table_schema,
                           table_name=table_name,
                           table_type=table_type,
                           remove_pkey=remove_pkey),
-                  key=lambda _col: __column_priority(_col))
+                  key=lambda _col, pk_for_sort=pk_for_sort: __column_priority(_col, primary_key=pk_for_sort))
 
     if pkey and remove_pkey:
         cols.remove(pkey)
@@ -410,11 +422,11 @@ def __column_alias(column: str,
     return col_alias
 
 
-def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[]):
+def __column_priority(column: str, columns_on_top: list=[], columns_at_end: list=[], primary_key: str=None):
     """
-    Returns a value to sort columns first by priority (on top / at end), then alphabetically
+    Returns a value to sort columns first the primary key, then by priority (on top / at end), then alphabetically
     """
-    if column == 'obj_id':
+    if primary_key is not None and primary_key == column:
         return [-1, column]
     if column in columns_on_top:
         return [0, column]
