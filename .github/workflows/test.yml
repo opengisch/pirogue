@@ -42,45 +42,33 @@ jobs:
       PGUSER: postgres
 
     steps:
-    - uses: actions/checkout@v2
+      - name: Get source code
+        uses: actions/checkout@v4
 
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+          cache: "pip"
+          cache-dependency-path: "requirements*.txt"
 
-    - name: Install requirements
-      run: |
-        pip install -r requirements.txt
-        pip install -r test/requirements.txt
+      - name: Install requirements
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
 
-    - name: Cache pip
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: pip-${{ hashFiles('requirements.txt') }}-${{ hashFiles('test/requirements.txt') }}
-        restore-keys: |
-          pip-${{ hashFiles('requirements.txt') }}
-          pip-
+      - name: Install pirogue
+        run: python -m pip install -e .
 
-    - name: Setup pirogue
-      run: |
-        VERSION=${GITHUB_REF:-0.0.0}
-        VERSION=${VERSION##*/}
-        sed -i "s/__VERSION__/${VERSION}/g" setup.py
-        python setup.py install
-        pirogue -v
+      - name: Setup tests
+        run: |
+          printf "[pirogue_test]\nhost=localhost\ndbname=pirogue_test_db\nuser=pirogue\npassword=1234\n\n" >> ~/.pg_service.conf
+          PGSERVICE=pirogue_test psql --quiet -v ON_ERROR_STOP=on -f test/demo_data.sql
 
-    - name: Setup tests
-      run: |
-        printf "[pirogue_test]\nhost=localhost\ndbname=pirogue_test_db\nuser=pirogue\npassword=1234\n\n" >> ~/.pg_service.conf
-        PGSERVICE=pirogue_test psql --quiet -v ON_ERROR_STOP=on -f test/demo_data.sql
+      - name: Run bash tests
+        run: ./test/test_simple_inheritance.sh
 
-    - name: Run bash tests
-      run: |
-        ./test/test_simple_inheritance.sh
-
-    - name: Run Python tests
-      run: nose2 -v
+      - name: Run Python tests
+        run: nose2 -v
 
 
