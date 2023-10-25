@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm", "wheel", "setuptools-git-versioning"]
+build-backend = "setuptools.build_meta"
+
+[project]
+requires-python = ">=3.9"
+name = "pirogue"
+authors = [
+    {name = "Denis Rouzaud", email = "info@opengis.ch"},
+]
+description = "pirogue let you dynamically and easily create views in PostgreSQL for inheritance or join scenarios."
+keywords =  ["postgres"]
+classifiers = [
+    'Topic :: Database',
+    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+    'Intended Audience :: System Administrators',
+    'Intended Audience :: Information Technology',
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+]
+license = { text = "MIT License" }
+dynamic = ["version", "readme", "dependencies", "optional-dependencies"]
+
+[project.urls]
+homepage = "https://opengisch.github.io/pirogue/"
+repository = "https://github.com/opengisch/pirogue"
+tracker = "https://github.com/opengisch/pirogue/issues"
+
+[tool.setuptools-git-versioning]
+enabled = true
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/markdown"}
+dependencies = {file = ["requirements.txt"]}
+optional-dependencies.test = {file = ["requirements-test.txt"]}
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 120
