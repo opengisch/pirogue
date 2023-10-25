@@ -174,7 +174,8 @@ class MultipleInheritance:
                 success &= SingleInheritance(pg_service=self.pg_service,
                                              parent_table='{s}.{t}'.format(s=self.master_schema, t=self.master_table),
                                              child_table='{s}.{t}'.format(s=table_def['table_schema'], t=table_def['table_name']),
-                                             view_name='vw_{a}'.format(a=alias)
+                                             view_name='vw_{a}'.format(a=alias),
+                                             view_schema=self.view_schema,
                                              ).create()
         return success
 

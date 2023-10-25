@@ -29,7 +29,7 @@ class SimpleJoins:
 
         # check definition validity
         for key in definition.keys():
-            if key not in ('table', 'view_schema','joins', 'pkey', 'view_name'):
+            if key not in ('table', 'view_schema', 'joins', 'pkey', 'view_name'):
                 raise InvalidDefinition('key {k} is not a valid'.format(k=key))
         # check joins validity
         for alias, table_def in definition['joins'].items():
