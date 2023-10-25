@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
+  workflow_call:
 
 env:
   PROJECT_FOLDER: "pirogue"
