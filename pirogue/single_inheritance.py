@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
-
 import os
+
 import psycopg2
 import psycopg2.extras
 
-from pirogue.utils import table_parts, select_columns, insert_command, update_command
-from pirogue.information_schema import reference_columns, primary_key, default_value
 from pirogue.exceptions import TableHasNoPrimaryKey
+from pirogue.information_schema import default_value, primary_key, reference_columns
+from pirogue.utils import insert_command, select_columns, table_parts, update_command
 
 
 class SingleInheritance:
@@ -14,12 +13,16 @@ class SingleInheritance:
     Creates a join view with associated triggers to edit for a single inheritance.
     """
 
-    def __init__(self, parent_table: str, child_table: str,
-                 pg_service: str = None,
-                 view_schema: str = None,
-                 view_name: str = None,
-                 pkey_default_value: bool = False,
-                 inner_defaults: dict = {}):
+    def __init__(
+        self,
+        parent_table: str,
+        child_table: str,
+        pg_service: str = None,
+        view_schema: str = None,
+        view_name: str = None,
+        pkey_default_value: bool = False,
+        inner_defaults: dict = {},
+    ):
         """
         Produces the SQL code of the join table and triggers
 
@@ -42,8 +45,8 @@ class SingleInheritance:
         """
 
         if pg_service is None:
-            pg_service = os.getenv('PGSERVICE')
-        self.conn = psycopg2.connect("service={0}".format(pg_service))
+            pg_service = os.getenv("PGSERVICE")
+        self.conn = psycopg2.connect(f"service={pg_service}")
         self.cursor = self.conn.cursor()
 
         self.pkey_default_value = pkey_default_value
@@ -54,17 +57,21 @@ class SingleInheritance:
 
         if view_schema is None:
             if self.parent_schema != self.child_schema:
-                raise ValueError('Destination schema cannot be guessed if different on sources tables.')
+                raise ValueError(
+                    "Destination schema cannot be guessed if different on sources tables."
+                )
             else:
                 self.view_schema = self.parent_schema
         else:
             self.view_schema = view_schema
 
-        self.view_name = view_name or "vw_{pt}_{ct}".format(pt=self.parent_table, ct=self.child_table)
+        self.view_name = view_name or "vw_{pt}_{ct}".format(
+            pt=self.parent_table, ct=self.child_table
+        )
 
-        (self.ref_parent_key, parent_referenced_key) = reference_columns(self.cursor,
-                                                                         self.child_schema, self.child_table,
-                                                                         self.parent_schema, self.parent_table)
+        (self.ref_parent_key, parent_referenced_key) = reference_columns(
+            self.cursor, self.child_schema, self.child_table, self.parent_schema, self.parent_table
+        )
         try:
             self.child_pkey = primary_key(self.cursor, self.child_schema, self.child_table)
         except TableHasNoPrimaryKey:
@@ -79,18 +86,19 @@ class SingleInheritance:
         Returns True in case of success
         """
         success = True
-        for sql in [self.__view(),
-                    self.__insert_trigger(),
-                    self.__update_trigger(),
-                    self.__delete_trigger(),
-                    self.__extras()
-                    ]:
+        for sql in [
+            self.__view(),
+            self.__insert_trigger(),
+            self.__update_trigger(),
+            self.__delete_trigger(),
+            self.__extras(),
+        ]:
             try:
                 if sql:
                     self.cursor.execute(sql)
             except psycopg2.Error as e:
                 success = False
-                print("*** Failing:\n{}\n***".format(sql))
+                print(f"*** Failing:\n{sql}\n***")
                 raise e
         self.conn.commit()
         self.conn.close()
@@ -107,16 +115,26 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
   {parent_cols}
   FROM {cs}.{ct}
   LEFT JOIN {ps}.{pt} ON {pt}.{prk} = {ct}.{rpk};
-""".format(vs=self.view_schema,
-           vn=self.view_name,
-           parent_cols=select_columns(self.cursor, self.parent_schema, self.parent_table, table_alias=self.parent_table, remove_pkey=True),
-           child_cols=select_columns(self.cursor, self.child_schema, self.child_table, table_alias=self.child_table),
-           cs=self.child_schema,
-           ct=self.child_table,
-           ps=self.parent_schema,
-           pt=self.parent_table,
-           rpk=self.ref_parent_key,
-           prk=self.parent_pkey)
+""".format(
+            vs=self.view_schema,
+            vn=self.view_name,
+            parent_cols=select_columns(
+                self.cursor,
+                self.parent_schema,
+                self.parent_table,
+                table_alias=self.parent_table,
+                remove_pkey=True,
+            ),
+            child_cols=select_columns(
+                self.cursor, self.child_schema, self.child_table, table_alias=self.child_table
+            ),
+            cs=self.child_schema,
+            ct=self.child_table,
+            ps=self.parent_schema,
+            pt=self.parent_table,
+            rpk=self.ref_parent_key,
+            prk=self.parent_pkey,
+        )
 
         return sql
 
@@ -143,18 +161,29 @@ DROP TRIGGER IF EXISTS tr_{vn}_on_insert ON {vs}.{vn};
 CREATE TRIGGER tr_{vn}_on_insert
   INSTEAD OF INSERT ON {vs}.{vn}
   FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_insert();
-""".format(vs=self.view_schema,
-           vn=self.view_name,
-           insert_parent=insert_command(self.cursor, self.parent_schema, self.parent_table,
-                                        remove_pkey=False,
-                                        coalesce_pkey_default=True,
-                                        remap_columns={self.parent_pkey: self.ref_parent_key},
-                                        inner_defaults=self.inner_defaults,
-                                        returning='{ppk} INTO NEW.{prk}'.format(ppk=self.parent_pkey, prk=self.ref_parent_key)),
-           insert_child=insert_command(self.cursor, self.child_schema, self.child_table,
-                                       remove_pkey=False,
-                                       pkey=self.child_pkey)
-           )
+""".format(
+            vs=self.view_schema,
+            vn=self.view_name,
+            insert_parent=insert_command(
+                self.cursor,
+                self.parent_schema,
+                self.parent_table,
+                remove_pkey=False,
+                coalesce_pkey_default=True,
+                remap_columns={self.parent_pkey: self.ref_parent_key},
+                inner_defaults=self.inner_defaults,
+                returning="{ppk} INTO NEW.{prk}".format(
+                    ppk=self.parent_pkey, prk=self.ref_parent_key
+                ),
+            ),
+            insert_child=insert_command(
+                self.cursor,
+                self.child_schema,
+                self.child_table,
+                remove_pkey=False,
+                pkey=self.child_pkey,
+            ),
+        )
         return sql
 
     def __update_trigger(self):
@@ -176,12 +205,23 @@ DROP TRIGGER IF EXISTS tr_{vn}_on_update ON {vs}.{vn};
 CREATE TRIGGER tr_{vn}_on_update
   INSTEAD OF UPDATE ON {vs}.{vn}
   FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_update();
-""".format(vs=self.view_schema,
-           vn=self.view_name,
-           update_master=update_command(self.cursor, self.parent_schema, self.parent_table,
-                                        remap_columns={self.parent_pkey: self.ref_parent_key}),
-           update_child=update_command(self.cursor, self.child_schema, self.child_table, pkey=self.child_pkey, remove_pkey=False)
-           )
+""".format(
+            vs=self.view_schema,
+            vn=self.view_name,
+            update_master=update_command(
+                self.cursor,
+                self.parent_schema,
+                self.parent_table,
+                remap_columns={self.parent_pkey: self.ref_parent_key},
+            ),
+            update_child=update_command(
+                self.cursor,
+                self.child_schema,
+                self.child_table,
+                pkey=self.child_pkey,
+                remove_pkey=False,
+            ),
+        )
         return sql
 
     def __delete_trigger(self):
@@ -201,22 +241,27 @@ DROP TRIGGER IF EXISTS tr_{vn}_on_delete ON {vs}.{vn};
 CREATE TRIGGER tr_{vn}_on_delete
   INSTEAD OF DELETE ON {vs}.{vn}
   FOR EACH ROW EXECUTE PROCEDURE {vs}.ft_{vn}_delete();
-""".format(vs=self.view_schema,
-           vn=self.view_name,
-           cs=self.child_schema,
-           ct=self.child_table,
-           rpk=self.ref_parent_key,
-           ppk=self.parent_pkey,
-           ps=self.parent_schema,
-           pt=self.parent_table)
+""".format(
+            vs=self.view_schema,
+            vn=self.view_name,
+            cs=self.child_schema,
+            ct=self.child_table,
+            rpk=self.ref_parent_key,
+            ppk=self.parent_pkey,
+            ps=self.parent_schema,
+            pt=self.parent_table,
+        )
         return sql
 
     def __extras(self):
-        sql = ''
+        sql = ""
         if self.pkey_default_value:
-            sql += "ALTER VIEW {vs}.{vn} ALTER {rpk} SET DEFAULT {dv};"\
-                .format(vs=self.view_schema,
-                        vn=self.view_name,
-                        rpk=self.child_pkey,
-                        dv=default_value(self.cursor, self.child_schema, self.child_table, self.child_pkey))
+            sql += "ALTER VIEW {vs}.{vn} ALTER {rpk} SET DEFAULT {dv};".format(
+                vs=self.view_schema,
+                vn=self.view_name,
+                rpk=self.child_pkey,
+                dv=default_value(
+                    self.cursor, self.child_schema, self.child_table, self.child_pkey
+                ),
+            )
         return sql

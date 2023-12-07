@@ -73,5 +73,3 @@ jobs:
 
       - name: Run Python tests
         run: nose2 -v
-
-
