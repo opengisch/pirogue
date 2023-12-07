@@ -2,9 +2,7 @@ name: Build and deploy docs
 
 
 on:
-  push:
-    branches:
-      - master
+  release:
 
 jobs:
   docs:
@@ -36,10 +34,7 @@ jobs:
 
     - name: Setup pirogue
       run: |
-        VERSION=${GITHUB_REF:-0.0.0}
-        VERSION=${VERSION##*/}
-        sed -i "s/__VERSION__/${VERSION}/g" setup.py
-        python setup.py install
+        python -m pip install -e .
         pirogue -v
 
     - name: Build docs
