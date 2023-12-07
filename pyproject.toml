@@ -27,7 +27,7 @@ repository = "https://github.com/opengisch/pirogue"
 tracker = "https://github.com/opengisch/pirogue/issues"
 
 [project.scripts]
-pirogue = "scripts.pirogue:main"
+pirogue = "pirogue.cli:main"
 
 [tool.setuptools-git-versioning]
 enabled = true
