@@ -1,0 +1,23 @@
+﻿pirogue.MultipleInheritance
+===========================
+
+.. currentmodule:: pirogue
+
+.. autoclass:: MultipleInheritance
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~MultipleInheritance.__init__
+      ~MultipleInheritance.create
+   
+   
+
+   
+   
+   

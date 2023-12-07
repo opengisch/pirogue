@@ -1,0 +1,6 @@
+﻿pirogue.utils.insert\_command
+=============================
+
+.. currentmodule:: pirogue.utils
+
+.. autofunction:: insert_command

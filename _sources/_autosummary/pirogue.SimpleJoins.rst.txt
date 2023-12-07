@@ -1,0 +1,23 @@
+﻿pirogue.SimpleJoins
+===================
+
+.. currentmodule:: pirogue
+
+.. autoclass:: SimpleJoins
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SimpleJoins.__init__
+      ~SimpleJoins.create
+   
+   
+
+   
+   
+   

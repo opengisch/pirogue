@@ -1,0 +1,6 @@
+﻿pirogue.utils.update\_command
+=============================
+
+.. currentmodule:: pirogue.utils
+
+.. autofunction:: update_command

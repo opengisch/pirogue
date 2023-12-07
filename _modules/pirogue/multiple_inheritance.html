@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pirogue.multiple_inheritance &mdash; pirogue master documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=48f0e2ba"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pirogue
+          </a>
+              <div class="version">
+                master
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.SingleInheritance.html">pirogue.SingleInheritance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.MultipleInheritance.html">pirogue.MultipleInheritance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.SimpleJoins.html">pirogue.SimpleJoins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.information_schema.html">pirogue.information_schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.utils.table_parts.html">pirogue.utils.table_parts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.utils.select_columns.html">pirogue.utils.select_columns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.utils.insert_command.html">pirogue.utils.insert_command</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.utils.update_command.html">pirogue.utils.update_command</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.exceptions.html">pirogue.exceptions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pirogue</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pirogue.multiple_inheritance</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pirogue.multiple_inheritance</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">psycopg2</span>
+<span class="kn">import</span> <span class="nn">psycopg2.extras</span>
+
+<span class="kn">from</span> <span class="nn">pirogue.utils</span> <span class="kn">import</span> <span class="n">table_parts</span><span class="p">,</span> <span class="n">select_columns</span><span class="p">,</span> <span class="n">insert_command</span><span class="p">,</span> <span class="n">update_command</span><span class="p">,</span> <span class="n">default_value</span>
+<span class="kn">from</span> <span class="nn">pirogue.information_schema</span> <span class="kn">import</span> <span class="n">reference_columns</span><span class="p">,</span> <span class="n">primary_key</span><span class="p">,</span> <span class="n">columns</span><span class="p">,</span> <span class="n">geometry_type</span>
+<span class="kn">from</span> <span class="nn">pirogue.exceptions</span> <span class="kn">import</span> <span class="n">TableHasNoPrimaryKey</span><span class="p">,</span> <span class="n">VariableError</span><span class="p">,</span> <span class="n">InvalidDefinition</span>
+<span class="kn">from</span> <span class="nn">pirogue.single_inheritance</span> <span class="kn">import</span> <span class="n">SingleInheritance</span>
+
+
+<div class="viewcode-block" id="MultipleInheritance"><a class="viewcode-back" href="../../_autosummary/pirogue.MultipleInheritance.html#pirogue.MultipleInheritance">[docs]</a><span class="k">class</span> <span class="nc">MultipleInheritance</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a view for multiple inheritance objects with associated triggers to edit data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MultipleInheritance.__init__"><a class="viewcode-back" href="../../_autosummary/pirogue.MultipleInheritance.html#pirogue.MultipleInheritance.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">definition</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                 <span class="n">pg_service</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">variables</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                 <span class="n">create_joins</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">drop</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Produces the SQL code of the join table and triggers</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        definition</span>
+<span class="sd">            the YAML definition of the multiple inheritance</span>
+<span class="sd">        pg_service</span>
+<span class="sd">            if not given, it is determined using environment variable PGSERVICE</span>
+<span class="sd">        variables</span>
+<span class="sd">            dictionary for variables to be used in SQL deltas ( name =&gt; value )</span>
+<span class="sd">        create_joins</span>
+<span class="sd">            if True, simple joins will be created for all joined tables</span>
+<span class="sd">        drop</span>
+<span class="sd">            if True, will drop any existing view, type or trigger that will be created later</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span> <span class="o">=</span> <span class="n">variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_joins</span> <span class="o">=</span> <span class="n">create_joins</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">drop</span> <span class="o">=</span> <span class="n">drop</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pg_service</span> <span class="o">=</span> <span class="n">pg_service</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pg_service</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pg_service</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;PGSERVICE&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span> <span class="o">=</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;service=</span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_service</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+        <span class="c1"># check definition validity</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">definition</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;table&#39;</span><span class="p">,</span> <span class="s1">&#39;view_schema&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;view_name&#39;</span><span class="p">,</span> <span class="s1">&#39;alias&#39;</span><span class="p">,</span> <span class="s1">&#39;short_alias&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;type_name&#39;</span><span class="p">,</span> <span class="s1">&#39;joins&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;insert_trigger&#39;</span><span class="p">,</span> <span class="s1">&#39;update_trigger&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;allow_type_change&#39;</span><span class="p">,</span> <span class="s1">&#39;allow_parent_only&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;additional_columns&#39;</span><span class="p">,</span> <span class="s1">&#39;additional_joins&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;merge_columns&#39;</span><span class="p">,</span> <span class="s1">&#39;merge_geometry_columns&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;pkey_default_value&#39;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">InvalidDefinition</span><span class="p">(</span><span class="s1">&#39;key </span><span class="si">{k}</span><span class="s1"> is not a valid&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">key</span><span class="p">))</span>
+        <span class="c1"># check joins validity</span>
+        <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">definition</span><span class="p">[</span><span class="s1">&#39;joins&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">table_def</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;table&#39;</span><span class="p">,</span> <span class="s1">&#39;short_alias&#39;</span><span class="p">,</span>
+                               <span class="s1">&#39;skip_columns&#39;</span><span class="p">,</span> <span class="s1">&#39;fkey&#39;</span><span class="p">,</span>
+                               <span class="s1">&#39;remap_columns&#39;</span><span class="p">,</span> <span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="s1">&#39;insert_values&#39;</span><span class="p">,</span> <span class="s1">&#39;update_values&#39;</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">InvalidDefinition</span><span class="p">(</span><span class="s1">&#39;in join </span><span class="si">{a}</span><span class="s1"> key &quot;</span><span class="si">{k}</span><span class="s1">&quot; is not valid&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="n">alias</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="n">key</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">mandatory_key</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;joins&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">mandatory_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">definition</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidDefinition</span><span class="p">(</span><span class="s1">&#39;Missing key: &quot;</span><span class="si">{k}</span><span class="s1">&quot; should be provided.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">mandatory_key</span><span class="p">))</span>
+        <span class="c1"># check trigger modifiers validity</span>
+        <span class="k">for</span> <span class="n">trigger</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;insert_trigger&#39;</span><span class="p">,</span> <span class="s1">&#39;update_trigger&#39;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">trigger</span><span class="p">,</span> <span class="p">{}):</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;declare&#39;</span><span class="p">,</span> <span class="s1">&#39;pre&#39;</span><span class="p">,</span> <span class="s1">&#39;post&#39;</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">InvalidDefinition</span><span class="p">(</span><span class="s1">&#39;key </span><span class="si">{k}</span><span class="s1"> is not valid in trigger definitions&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">key</span><span class="p">))</span>
+
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">)</span> <span class="o">=</span> <span class="n">table_parts</span><span class="p">(</span><span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;table&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_skip_colums</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;skip_columns&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_prefix</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_remap_columns</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;remap_columns&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkey_default_value</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pkey_default_value&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># global options:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;view_schema&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view_name</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;view_name&#39;</span><span class="p">,</span> <span class="s2">&quot;vw_merge_</span><span class="si">{t}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view_alias</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;alias&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">short_alias</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;short_alias&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">view_alias</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_name</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;type_name&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{al}</span><span class="s1">_type&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">al</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_alias</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">insert_trigger</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;insert_trigger&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_trigger</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;update_trigger&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allow_parent_only</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;allow_parent_only&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allow_type_change</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;allow_type_change&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">additional_joins</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;additional_joins&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">additional_columns</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;additional_columns&#39;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span> <span class="o">=</span> <span class="n">primary_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TableHasNoPrimaryKey</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">TableHasNoPrimaryKey</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{vn}</span><span class="s1"> has no primary key, specify it with &quot;key&quot;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_alias</span><span class="p">))</span>
+
+        <span class="c1"># parse the joins definition</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joins</span> <span class="o">=</span> <span class="n">definition</span><span class="p">[</span><span class="s1">&#39;joins&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joined_ref_master_key</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="p">(</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">])</span> <span class="o">=</span> <span class="n">table_parts</span><span class="p">(</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table&#39;</span><span class="p">])</span>
+            <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;short_alias&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;short_alias&#39;</span><span class="p">,</span> <span class="n">alias</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s1">&#39;fkey&#39;</span> <span class="ow">in</span> <span class="n">table_def</span><span class="p">:</span>
+                <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;fkey&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">reference_columns</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span>
+                                                                <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span>
+                                                                <span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;pkey&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">primary_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="n">TableHasNoPrimaryKey</span><span class="p">:</span>
+                <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;pkey&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">]</span>
+
+        <span class="c1"># pre-process merged columns</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">merge_column_cast</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># for geometry columns, we need to get the type to cast the NULL value</span>
+        <span class="n">merge_geometry_columns</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;merge_geometry_columns&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">merge_geometry_columns</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">gt</span> <span class="o">=</span> <span class="n">geometry_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span> <span class="n">col</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">gt</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">merge_column_cast</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;::geometry(</span><span class="si">{type}</span><span class="s1">,</span><span class="si">{srid}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">gt</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">srid</span><span class="o">=</span><span class="n">gt</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge_column_cast</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidDefinition</span><span class="p">(</span><span class="s1">&#39;There is no geometry column &quot;</span><span class="si">{col}</span><span class="s1">&quot; in joined tables&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">merge_columns</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;merge_columns&#39;</span><span class="p">,</span> <span class="p">[])</span> <span class="o">+</span> <span class="n">merge_geometry_columns</span></div>
+
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates the merge view on the specified service</span>
+<span class="sd">        Returns True in case of success</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">queries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">success</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">drop</span><span class="p">:</span>
+            <span class="n">queries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__drops</span><span class="p">())</span>
+        <span class="n">queries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__type</span><span class="p">())</span>
+        <span class="n">queries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__view</span><span class="p">())</span>
+        <span class="n">queries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__insert_trigger</span><span class="p">())</span>
+        <span class="n">queries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__update_trigger</span><span class="p">())</span>
+        <span class="n">queries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__delete_trigger</span><span class="p">())</span>
+        <span class="n">queries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__extras</span><span class="p">())</span>
+
+        <span class="k">for</span> <span class="n">sql</span> <span class="ow">in</span> <span class="n">queries</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">sql</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">sql</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">success</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;*** Failing:</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="s2">***&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sql</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="n">VariableError</span><span class="p">(</span><span class="s2">&quot;An error in a SQL variable is probable. &quot;</span>
+                                    <span class="s2">&quot;Check the variables in the SQL code &quot;</span>
+                                    <span class="s2">&quot;(were given: </span><span class="si">{svars}</span><span class="s2">). &quot;</span>
+                                    <span class="s2">&quot;Also, any </span><span class="si">% c</span><span class="s2">haracter shall be escaped with </span><span class="si">%%</span><span class="s2">&quot;</span>
+                                    <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">svars</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">keys</span><span class="p">())))</span>
+            <span class="k">except</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;*** Failing:</span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="s2">***&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sql</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="n">e</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_joins</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">success</span> <span class="o">&amp;=</span> <span class="n">SingleInheritance</span><span class="p">(</span><span class="n">pg_service</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pg_service</span><span class="p">,</span>
+                                             <span class="n">parent_table</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{s}</span><span class="s1">.</span><span class="si">{t}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">),</span>
+                                             <span class="n">child_table</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{s}</span><span class="s1">.</span><span class="si">{t}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span> <span class="n">t</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">]),</span>
+                                             <span class="n">view_name</span><span class="o">=</span><span class="s1">&#39;vw_</span><span class="si">{a}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="n">alias</span><span class="p">),</span>
+                                             <span class="n">view_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                                             <span class="p">)</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">success</span>
+
+    <span class="k">def</span> <span class="nf">__drops</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s2">&quot;DROP VIEW IF EXISTS </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span><span class="s2">;&quot;</span> \
+              <span class="s2">&quot;DROP TYPE IF EXISTS </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{tn}</span><span class="s2">;&quot;</span> \
+                  <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                    <span class="n">tn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+                    <span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sql</span>
+
+    <span class="k">def</span> <span class="nf">__type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s2">&quot;CREATE TYPE </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{tn}</span><span class="s2"> AS ENUM (&#39;</span><span class="si">{pt}</span><span class="s2">&#39;, </span><span class="si">{ct}</span><span class="s2"> );&quot;</span>\
+            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                    <span class="n">tn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+                    <span class="n">pt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_alias</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_parent_only</span> <span class="k">else</span> <span class="s1">&#39;unknown&#39;</span><span class="p">,</span>
+                    <span class="n">ct</span><span class="o">=</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;&#39;</span><span class="si">{al}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">al</span><span class="o">=</span><span class="n">alias</span><span class="p">)</span> <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">sql</span>
+
+    <span class="k">def</span> <span class="nf">__view</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">sorted_joins</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+
+        <span class="n">sql</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CREATE OR REPLACE VIEW </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span><span class="s2"> AS</span>
+<span class="s2">  SELECT</span>
+<span class="s2">    CASE</span>
+<span class="s2">      </span><span class="si">{types}</span>
+<span class="s2">      ELSE </span><span class="si">{no_subtype}</span>
+<span class="s2">    END AS </span><span class="si">{type_name}</span>
+<span class="s2">    </span><span class="si">{master_columns}{merge_columns}</span>
+<span class="s2">    </span><span class="si">{joined_columns}{additional_columns}</span>
+<span class="s2">  FROM </span><span class="si">{mt}</span><span class="s2">.</span><span class="si">{ms}</span><span class="s2"> </span><span class="si">{sa}</span>
+<span class="s2">    </span><span class="si">{joined_tables}{additional_joins}</span><span class="s2">;        </span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+           <span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_name</span><span class="p">,</span>
+           <span class="n">types</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;WHEN </span><span class="si">{shal}</span><span class="s2">.</span><span class="si">{mrf}</span><span class="s2"> IS NOT NULL THEN &#39;</span><span class="si">{al}</span><span class="s2">&#39;::</span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{tn}</span><span class="s2">&quot;</span>
+                                 <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shal</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;short_alias&#39;</span><span class="p">],</span> <span class="n">mrf</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">],</span>
+                                         <span class="n">al</span><span class="o">=</span><span class="n">alias</span><span class="p">,</span> <span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span> <span class="n">tn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">)</span>
+                                  <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span><span class="p">]),</span>
+           <span class="n">no_subtype</span><span class="o">=</span><span class="s2">&quot;&#39;</span><span class="si">{type}</span><span class="s2">&#39;::</span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{tn}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_alias</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_parent_only</span> <span class="k">else</span> <span class="s1">&#39;unknown&#39;</span><span class="p">,</span>
+                                                   <span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span> <span class="n">tn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">),</span>
+           <span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+           <span class="n">master_columns</span><span class="o">=</span><span class="n">select_columns</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">,</span>
+                                         <span class="n">table_alias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_alias</span><span class="p">,</span>
+                                         <span class="n">skip_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_skip_colums</span><span class="p">,</span>
+                                         <span class="n">prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_prefix</span><span class="p">,</span>
+                                         <span class="n">remap_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_remap_columns</span><span class="p">,</span>
+                                         <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                                         <span class="n">separate_first</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+           <span class="n">merge_columns</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      , &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    , CASE&#39;</span>
+                                            <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      </span><span class="si">{conditions}</span><span class="s1">&#39;</span>
+                                            <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      ELSE NULL</span><span class="si">{cast}</span><span class="s1">&#39;</span>
+                                            <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    END AS </span><span class="si">{col}</span><span class="s1">&#39;</span>
+                                            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">,</span>
+                                                    <span class="n">conditions</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;WHEN </span><span class="si">{ta}</span><span class="s1">.</span><span class="si">{rmk}</span><span class="s1"> IS NOT NULL THEN </span><span class="si">{ta}</span><span class="s1">.</span><span class="si">{col}</span><span class="s1">&#39;</span>
+                                                                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ta</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;short_alias&#39;</span><span class="p">],</span>
+                                                                        <span class="n">rmk</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">],</span>
+                                                                        <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+                                                                <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span>
+                                                                <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span> <span class="n">skip_columns</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;skip_columns&#39;</span><span class="p">,</span> <span class="p">[]))]),</span>
+                                                    <span class="n">cast</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">merge_column_cast</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                                                    <span class="p">)</span>
+                                            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge_columns</span><span class="p">]),</span>
+           <span class="n">joined_columns</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">select_columns</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span>
+                                                        <span class="n">table_alias</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;short_alias&#39;</span><span class="p">],</span>
+                                                        <span class="n">skip_columns</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;skip_columns&#39;</span><span class="p">,</span> <span class="p">[])</span><span class="o">+</span><span class="p">[</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">]],</span>
+                                                        <span class="n">safe_skip_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">merge_columns</span><span class="p">,</span>
+                                                        <span class="n">prefix</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                                                        <span class="n">remove_pkey</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                                        <span class="n">remap_columns</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;remap_columns&#39;</span><span class="p">,</span> <span class="p">{}),</span>
+                                                        <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                                                        <span class="n">separate_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                                         <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span><span class="p">]),</span>
+           <span class="n">additional_columns</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;,</span><span class="se">\n</span><span class="s1">    </span><span class="si">{cdef}</span><span class="s1"> AS </span><span class="si">{alias}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cdef</span><span class="o">=</span><span class="n">cdef</span><span class="p">,</span><span class="n">alias</span><span class="o">=</span><span class="n">alias</span><span class="p">)</span>
+                                       <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">cdef</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">additional_columns</span><span class="o">.</span><span class="n">items</span><span class="p">()]),</span>
+           <span class="n">mt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span>
+           <span class="n">ms</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">,</span>
+           <span class="n">sa</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">short_alias</span><span class="p">,</span>
+           <span class="n">joined_tables</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;LEFT JOIN </span><span class="si">{tbl}</span><span class="s2"> </span><span class="si">{tal}</span><span class="s2"> ON </span><span class="si">{tal}</span><span class="s2">.</span><span class="si">{rmk}</span><span class="s2"> = </span><span class="si">{msa}</span><span class="s2">.</span><span class="si">{mpk}</span><span class="s2">&quot;</span>
+                                            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">tbl</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;table&#39;</span><span class="p">],</span>
+                                                    <span class="n">tal</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;short_alias&#39;</span><span class="p">],</span>
+                                                    <span class="n">rmk</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">],</span>
+                                                    <span class="n">msa</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">short_alias</span><span class="p">,</span>
+                                                    <span class="n">mpk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">)</span>
+                                            <span class="k">for</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span><span class="p">]),</span>
+           <span class="n">additional_joins</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    </span><span class="si">{ad}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ad</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">additional_joins</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">additional_joins</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span>
+           <span class="p">)</span>
+        <span class="k">return</span> <span class="n">sql</span>
+
+    <span class="k">def</span> <span class="nf">__insert_trigger</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">sorted_joins</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+
+        <span class="n">sql</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;-- INSERT TRIGGER</span>
+<span class="s2">CREATE OR REPLACE FUNCTION </span><span class="si">{vs}</span><span class="s2">.ft_</span><span class="si">{vn}</span><span class="s2">_insert() RETURNS trigger AS</span>
+<span class="s2">$BODY$</span>
+<span class="s2">DECLARE</span>
+<span class="s2">  </span><span class="si">{declare}</span>
+<span class="s2">BEGIN</span>
+<span class="s2">  </span><span class="si">{insert_trigger_pre}</span>
+<span class="s2">  </span><span class="si">{insert_master}</span>
+
+<span class="s2">  CASE </span>
+<span class="s2">    </span><span class="si">{insert_joins}</span>
+<span class="s2">  ELSE</span>
+<span class="s2">    </span><span class="si">{raise_notice}</span>
+<span class="s2">  END CASE;</span>
+
+<span class="s2">  </span><span class="si">{insert_trigger_post}</span>
+<span class="s2">RETURN NEW;</span>
+<span class="s2">END;</span>
+<span class="s2">$BODY$</span>
+<span class="s2">LANGUAGE plpgsql;</span>
+
+<span class="s2">DROP TRIGGER IF EXISTS tr_</span><span class="si">{vn}</span><span class="s2">_on_insert ON </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span><span class="s2">;</span>
+
+<span class="s2">CREATE TRIGGER tr_</span><span class="si">{vn}</span><span class="s2">_on_insert</span>
+<span class="s2">    INSTEAD OF INSERT ON </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span>
+<span class="s2">    FOR EACH ROW EXECUTE PROCEDURE </span><span class="si">{vs}</span><span class="s2">.ft_</span><span class="si">{vn}</span><span class="s2">_insert();</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+           <span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_name</span><span class="p">,</span>
+           <span class="n">declare</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{d}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">d</span><span class="o">=</span><span class="n">declare</span><span class="p">)</span> <span class="k">for</span> <span class="n">declare</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert_trigger</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;declare&#39;</span><span class="p">,</span> <span class="p">[])]),</span>
+           <span class="n">insert_trigger_pre</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">insert_trigger</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pre&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+           <span class="n">insert_master</span><span class="o">=</span><span class="n">insert_command</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">,</span>
+                                        <span class="n">skip_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_skip_colums</span><span class="p">,</span>
+                                        <span class="n">prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_prefix</span><span class="p">,</span>
+                                        <span class="n">remap_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_remap_columns</span><span class="p">,</span>
+                                        <span class="n">remove_pkey</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                        <span class="n">indent</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+                                        <span class="n">coalesce_pkey_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                        <span class="n">returning</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{mpk}</span><span class="s1"> INTO NEW.</span><span class="si">{mpk}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mpk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">)),</span>
+           <span class="n">insert_joins</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;WHEN NEW.</span><span class="si">{type_name}</span><span class="s2"> = &#39;</span><span class="si">{alias}</span><span class="s2">&#39;::</span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{type_name}</span><span class="s2"> THEN&quot;</span>
+                                       <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">      </span><span class="si">{insert_join}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+                                                                      <span class="n">alias</span><span class="o">=</span><span class="n">alias</span><span class="p">,</span>
+                                                                      <span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                                                                      <span class="n">insert_join</span><span class="o">=</span><span class="n">insert_command</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span>
+                                                                                                 <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span>
+                                                                                                 <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span>
+                                                                                                 <span class="n">table_alias</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;short_alias&#39;</span><span class="p">],</span>
+                                                                                                 <span class="n">skip_columns</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;skip_columns&#39;</span><span class="p">,</span> <span class="p">[]),</span>
+                                                                                                 <span class="n">prefix</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                                                                                                 <span class="n">insert_values</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="p">{</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">]:</span> <span class="s1">&#39;NEW.</span><span class="si">{c}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">)},</span>
+                                                                                                                <span class="o">**</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;insert_values&#39;</span><span class="p">,</span> <span class="p">{})},</span>
+                                                                                                 <span class="n">remap_columns</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;remap_columns&#39;</span><span class="p">,</span> <span class="p">{}),</span>
+                                                                                                 <span class="n">remove_pkey</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                                                                                 <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                                      <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span><span class="p">]),</span>
+           <span class="n">raise_notice</span><span class="o">=</span><span class="s1">&#39;NULL;&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_parent_only</span> <span class="k">else</span> <span class="s2">&quot;RAISE NOTICE &#39;</span><span class="si">{vn}</span><span class="s2"> type not known (</span><span class="si">{percent_char}</span><span class="s2">)&#39;, NEW.</span><span class="si">{type_name}</span><span class="s2">; -- ERROR&quot;</span>
+                            <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_name</span><span class="p">,</span>
+                                    <span class="n">percent_char</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%%</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span> <span class="k">else</span> <span class="s1">&#39;%&#39;</span><span class="p">,</span>  <span class="c1"># if variables, % should be escaped because cursor.execute is run with variables</span>
+                                    <span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">),</span>
+           <span class="n">insert_trigger_post</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">insert_trigger</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;post&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">sql</span>
+
+
+    <span class="k">def</span> <span class="nf">__update_trigger</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sorted_joins</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;-- UPDATE TRIGGER</span>
+<span class="s2">CREATE OR REPLACE FUNCTION </span><span class="si">{vs}</span><span class="s2">.ft_</span><span class="si">{vn}</span><span class="s2">_update() RETURNS trigger AS</span>
+<span class="s2">$BODY$</span>
+<span class="s2">DECLARE</span>
+<span class="s2">  </span><span class="si">{declare}</span>
+<span class="s2">BEGIN</span>
+<span class="s2">  </span><span class="si">{update_trigger_pre}</span>
+<span class="s2">  </span><span class="si">{update_master}</span>
+
+<span class="s2">  IF OLD.</span><span class="si">{type_name}</span><span class="s2"> &lt;&gt; NEW.</span><span class="si">{type_name}</span><span class="s2"> THEN</span>
+<span class="s2">    </span><span class="si">{type_change}</span>
+<span class="s2">  END IF;</span>
+
+<span class="s2">  CASE </span><span class="si">{update_joins}</span>
+<span class="s2">  ELSE</span>
+<span class="s2">     </span><span class="si">{raise_notice}</span>
+<span class="s2">  END CASE;</span>
+<span class="s2">  </span><span class="si">{update_trigger_post}</span>
+<span class="s2">RETURN NEW;</span>
+<span class="s2">END;</span>
+<span class="s2">$BODY$</span>
+<span class="s2">LANGUAGE plpgsql;</span>
+
+<span class="s2">DROP TRIGGER IF EXISTS tr_</span><span class="si">{vn}</span><span class="s2">_on_update ON </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span><span class="s2">;</span>
+
+<span class="s2">CREATE TRIGGER tr_</span><span class="si">{vn}</span><span class="s2">_on_update</span>
+<span class="s2">    INSTEAD OF update ON </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span>
+<span class="s2">    FOR EACH ROW EXECUTE PROCEDURE </span><span class="si">{vs}</span><span class="s2">.ft_</span><span class="si">{vn}</span><span class="s2">_update();</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                   <span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_name</span><span class="p">,</span>
+                   <span class="n">declare</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{d}</span><span class="s1">;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">d</span><span class="o">=</span><span class="n">declare</span><span class="p">)</span> <span class="k">for</span> <span class="n">declare</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_trigger</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;declare&#39;</span><span class="p">,</span> <span class="p">[])]),</span>
+                   <span class="n">update_trigger_pre</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">update_trigger</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pre&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                   <span class="n">update_master</span><span class="o">=</span><span class="n">update_command</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">,</span>
+                                                <span class="n">skip_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_skip_colums</span><span class="p">,</span>
+                                                <span class="n">prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_prefix</span><span class="p">,</span>
+                                                <span class="n">remap_columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_remap_columns</span><span class="p">,</span>
+                                                <span class="n">indent</span><span class="o">=</span><span class="mi">8</span><span class="p">),</span>
+                   <span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+                   <span class="n">type_change</span><span class="o">=</span><span class="s2">&quot;RAISE EXCEPTION &#39;Type change not allowed for </span><span class="si">{alias}</span><span class="s2">&#39;&quot;</span>
+                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">      USING HINT = &#39;You cannot switch from &#39; &quot;</span>
+                               <span class="s2">&quot;|| OLD.</span><span class="si">{type_name}</span><span class="s2"> || &#39; to &#39; || NEW.</span><span class="si">{type_name}</span><span class="s2">;&quot;</span>
+                                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">alias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_alias</span><span class="p">,</span> <span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">)</span>
+                               <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_type_change</span> <span class="k">else</span>
+                               <span class="s2">&quot;CASE&quot;</span>
+                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">      </span><span class="si">{deletes}</span><span class="s2">&quot;</span>
+                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">    END CASE;&quot;</span>
+                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">    CASE&quot;</span>
+                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">      </span><span class="si">{inserts}</span><span class="s2">&quot;</span>
+                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">      ELSE -- do nothing&quot;</span>
+                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">    END CASE;&quot;</span>
+                               <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">deletes</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;WHEN OLD.</span><span class="si">{type_name}</span><span class="s2"> = &#39;</span><span class="si">{alias}</span><span class="s2">&#39;::</span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{type_name}</span><span class="s2"> &quot;</span>
+                                                                <span class="s2">&quot;THEN DELETE FROM </span><span class="si">{ts}</span><span class="s2">.</span><span class="si">{tn}</span><span class="s2"> &quot;</span>
+                                                                <span class="s2">&quot;WHERE </span><span class="si">{rmk}</span><span class="s2"> = OLD.</span><span class="si">{mpk}</span><span class="s2">;&quot;</span>
+                                                                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+                                                                        <span class="n">alias</span><span class="o">=</span><span class="n">alias</span><span class="p">,</span>
+                                                                        <span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                                                                        <span class="n">ts</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span>
+                                                                        <span class="n">tn</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span>
+                                                                        <span class="n">rmk</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">],</span>
+                                                                        <span class="n">mpk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">)</span>
+                                                                <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span><span class="p">]),</span>
+                                       <span class="n">inserts</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;WHEN NEW.</span><span class="si">{type_name}</span><span class="s2"> = &#39;</span><span class="si">{alias}</span><span class="s2">&#39;::</span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{type_name}</span><span class="s2"> &quot;</span>
+                                                                <span class="s2">&quot;THEN INSERT INTO </span><span class="si">{ts}</span><span class="s2">.</span><span class="si">{tn}</span><span class="s2"> &quot;</span>
+                                                                <span class="s2">&quot;(</span><span class="si">{rmk}</span><span class="s2">) VALUES (OLD.</span><span class="si">{mpk}</span><span class="s2">);&quot;</span>
+                                                               <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+                                                                       <span class="n">alias</span><span class="o">=</span><span class="n">alias</span><span class="p">,</span>
+                                                                       <span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                                                                       <span class="n">ts</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span>
+                                                                       <span class="n">tn</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span>
+                                                                       <span class="n">rmk</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">],</span>
+                                                                       <span class="n">mpk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">)</span>
+                                                                <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span><span class="p">])),</span>
+                   <span class="n">update_joins</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">    &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;WHEN NEW.</span><span class="si">{type_name}</span><span class="s2"> = &#39;</span><span class="si">{alias}</span><span class="s2">&#39;::</span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{type_name}</span><span class="s2"> THEN&quot;</span>
+                                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">      </span><span class="si">{update_join}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+                                                                              <span class="n">alias</span><span class="o">=</span><span class="n">alias</span><span class="p">,</span>
+                                                                              <span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                                                                              <span class="n">update_join</span><span class="o">=</span><span class="n">update_command</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span> <span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span>
+                                                                                                         <span class="n">table_alias</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;short_alias&#39;</span><span class="p">],</span>
+                                                                                                         <span class="n">pkey</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;pkey&#39;</span><span class="p">],</span>
+                                                                                                         <span class="n">skip_columns</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;skip_columns&#39;</span><span class="p">,</span> <span class="p">[]),</span>
+                                                                                                         <span class="n">prefix</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                                                                                                         <span class="n">remap_columns</span><span class="o">=</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;remap_columns&#39;</span><span class="p">,</span> <span class="p">{}),</span>
+                                                                                                         <span class="n">update_values</span><span class="o">=</span><span class="p">{</span><span class="o">**</span><span class="p">{</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;pkey&#39;</span><span class="p">]:</span> <span class="s1">&#39;OLD.</span><span class="si">{c}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">)},</span>
+                                                                                                                        <span class="o">**</span><span class="n">table_def</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;update_values&#39;</span><span class="p">,</span> <span class="p">{})},</span>
+                                                                                                         <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+                                   <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span><span class="p">]),</span>
+                   <span class="n">raise_notice</span><span class="o">=</span><span class="s1">&#39;NULL;&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_parent_only</span>
+                                <span class="k">else</span> <span class="s2">&quot;RAISE NOTICE &#39;</span><span class="si">{vn}</span><span class="s2"> type not known (</span><span class="si">{percent_char}</span><span class="s2">)&#39;, NEW.</span><span class="si">{type_name}</span><span class="s2">; -- ERROR&quot;</span>
+                                     <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_name</span><span class="p">,</span>
+                                             <span class="n">percent_char</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%%</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span> <span class="k">else</span> <span class="s1">&#39;%&#39;</span><span class="p">,</span>  <span class="c1"># if variables, % should be escaped because cursor.execute is run with variables</span>
+                                             <span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">),</span>
+                   <span class="n">update_trigger_post</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">update_trigger</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;post&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">sql</span>
+
+    <span class="k">def</span> <span class="nf">__delete_trigger</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sorted_joins</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">joins</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">CREATE OR REPLACE FUNCTION </span><span class="si">{vs}</span><span class="s2">.ft_</span><span class="si">{vn}</span><span class="s2">_delete() RETURNS trigger AS</span>
+<span class="s2">    $BODY$</span>
+<span class="s2">    BEGIN</span>
+<span class="s2">    CASE</span>
+<span class="s2">        </span><span class="si">{deletes}</span>
+<span class="s2">    END CASE;</span>
+<span class="s2">    DELETE FROM </span><span class="si">{ts}</span><span class="s2">.</span><span class="si">{tn}</span><span class="s2"> WHERE </span><span class="si">{mpk}</span><span class="s2"> = OLD.</span><span class="si">{mpk}</span><span class="s2">;</span>
+<span class="s2">    RETURN NULL;</span>
+<span class="s2">    END;</span>
+<span class="s2">    $BODY$</span>
+<span class="s2">    LANGUAGE &#39;plpgsql&#39;;</span>
+
+<span class="s2">DROP TRIGGER IF EXISTS tr_</span><span class="si">{vn}</span><span class="s2">_on_delete ON </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span><span class="s2">;</span>
+
+<span class="s2">CREATE TRIGGER tr_</span><span class="si">{vn}</span><span class="s2">_on_delete</span>
+<span class="s2">    INSTEAD OF DELETE ON </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span>
+<span class="s2">    FOR EACH ROW EXECUTE PROCEDURE </span><span class="si">{vs}</span><span class="s2">.ft_</span><span class="si">{vn}</span><span class="s2">_delete();</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_name</span><span class="p">,</span>
+           <span class="n">deletes</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;WHEN OLD.</span><span class="si">{type_name}</span><span class="s2"> = &#39;</span><span class="si">{alias}</span><span class="s2">&#39;::</span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{type_name}</span><span class="s2"> &quot;</span>
+                                    <span class="s2">&quot;THEN DELETE FROM </span><span class="si">{ts}</span><span class="s2">.</span><span class="si">{tn}</span><span class="s2"> &quot;</span>
+                                    <span class="s2">&quot;WHERE </span><span class="si">{rmk}</span><span class="s2"> = OLD.</span><span class="si">{mpk}</span><span class="s2">;&quot;</span>
+                                   <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_name</span><span class="p">,</span>
+                                           <span class="n">alias</span><span class="o">=</span><span class="n">alias</span><span class="p">,</span>
+                                           <span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                                           <span class="n">ts</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_schema&#39;</span><span class="p">],</span>
+                                           <span class="n">tn</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;table_name&#39;</span><span class="p">],</span>
+                                           <span class="n">rmk</span><span class="o">=</span><span class="n">table_def</span><span class="p">[</span><span class="s1">&#39;ref_master_key&#39;</span><span class="p">],</span>
+                                           <span class="n">mpk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">)</span>
+                                    <span class="k">for</span> <span class="n">alias</span><span class="p">,</span> <span class="n">table_def</span> <span class="ow">in</span> <span class="n">sorted_joins</span><span class="p">]),</span>
+           <span class="n">ts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span>
+           <span class="n">tn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">,</span>
+           <span class="n">mpk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">,</span>
+           <span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sql</span>
+
+    <span class="k">def</span> <span class="nf">__extras</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sql</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkey_default_value</span><span class="p">:</span>
+            <span class="n">sql</span> <span class="o">+=</span> <span class="s2">&quot;ALTER VIEW </span><span class="si">{vs}</span><span class="s2">.</span><span class="si">{vn}</span><span class="s2"> ALTER </span><span class="si">{master_pkey}</span><span class="s2"> SET DEFAULT </span><span class="si">{dv}</span><span class="s2">;&quot;</span>\
+                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_schema</span><span class="p">,</span>
+                        <span class="n">vn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view_name</span><span class="p">,</span>
+                        <span class="n">master_pkey</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">,</span>
+                        <span class="n">dv</span><span class="o">=</span><span class="n">default_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_schema</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_table</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_pkey</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">sql</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2021, Denis Rouzaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

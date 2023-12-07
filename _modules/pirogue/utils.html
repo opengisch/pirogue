@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pirogue.utils &mdash; pirogue master documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=48f0e2ba"></script>
+        <script src="../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            pirogue
+          </a>
+              <div class="version">
+                master
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.SingleInheritance.html">pirogue.SingleInheritance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.MultipleInheritance.html">pirogue.MultipleInheritance</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.SimpleJoins.html">pirogue.SimpleJoins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.information_schema.html">pirogue.information_schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.utils.table_parts.html">pirogue.utils.table_parts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.utils.select_columns.html">pirogue.utils.select_columns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.utils.insert_command.html">pirogue.utils.insert_command</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.utils.update_command.html">pirogue.utils.update_command</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../_autosummary/pirogue.exceptions.html">pirogue.exceptions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pirogue</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">pirogue.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for pirogue.utils</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="kn">from</span> <span class="nn">psycopg2.extensions</span> <span class="kn">import</span> <span class="n">cursor</span>
+
+<span class="kn">from</span> <span class="nn">pirogue.exceptions</span> <span class="kn">import</span> <span class="n">InvalidColumn</span><span class="p">,</span> <span class="n">TableHasNoPrimaryKey</span>
+<span class="kn">from</span> <span class="nn">pirogue.information_schema</span> <span class="kn">import</span> <span class="n">columns</span><span class="p">,</span> <span class="n">primary_key</span><span class="p">,</span> <span class="n">default_value</span>
+
+
+<div class="viewcode-block" id="table_parts"><a class="viewcode-back" href="../../_autosummary/pirogue.utils.table_parts.html#pirogue.utils.table_parts">[docs]</a><span class="k">def</span> <span class="nf">table_parts</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a tuple with schema and table names</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name</span>
+<span class="sd">        the schema specified name of the table or view.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">and</span> <span class="s1">&#39;.&#39;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;public&#39;</span><span class="p">,</span> <span class="n">name</span></div>
+
+
+<div class="viewcode-block" id="select_columns"><a class="viewcode-back" href="../../_autosummary/pirogue.utils.select_columns.html#pirogue.utils.select_columns">[docs]</a><span class="k">def</span> <span class="nf">select_columns</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">:</span> <span class="n">cursor</span><span class="p">,</span>
+                   <span class="n">table_schema</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">table_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;table&#39;</span><span class="p">,</span>
+                   <span class="n">table_alias</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">remove_pkey</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                   <span class="n">skip_columns</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>
+                   <span class="n">safe_skip_columns</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>
+                   <span class="n">columns_list</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">comment_skipped</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="n">remap_columns</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                   <span class="n">columns_on_top</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>
+                   <span class="n">columns_at_end</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>
+                   <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">indent</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+                   <span class="n">separate_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the list of columns to be used in a SELECT command</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pg_cur</span>
+<span class="sd">        the psycopg cursor</span>
+<span class="sd">    table_schema</span>
+<span class="sd">        the schema</span>
+<span class="sd">    table_name</span>
+<span class="sd">        the name of the table</span>
+<span class="sd">    table_type</span>
+<span class="sd">        the type of table, i.e. view or table</span>
+<span class="sd">    table_alias</span>
+<span class="sd">        if not specified, table is used</span>
+<span class="sd">    remove_pkey</span>
+<span class="sd">        if True, the primary is removed from the list</span>
+<span class="sd">    skip_columns</span>
+<span class="sd">        list of columns to be skipped, raise an exception if the column does not exist</span>
+<span class="sd">    safe_skip_columns</span>
+<span class="sd">        list of columns to be skipped, do not raise exception if column does not exist</span>
+<span class="sd">    columns_list</span>
+<span class="sd">        if given use as list of columns</span>
+<span class="sd">    comment_skipped</span>
+<span class="sd">        if True, skipped columns are written but commented, otherwise they are not written</span>
+<span class="sd">        If remove_pkey is True, the primary key will not be printed</span>
+<span class="sd">    remap_columns</span>
+<span class="sd">        dictionary to remap columns</span>
+<span class="sd">    columns_on_top</span>
+<span class="sd">        bring the columns to the front of the list</span>
+<span class="sd">    columns_at_end</span>
+<span class="sd">        bring the columns to the end of the list</span>
+<span class="sd">    prefix</span>
+<span class="sd">        add a prefix to the columns (do not applied to remapped columns)</span>
+<span class="sd">    indent</span>
+<span class="sd">        add an indent in front</span>
+<span class="sd">    separate_first</span>
+<span class="sd">        separate the first column with a comma</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">pk_for_sort</span> <span class="o">=</span> <span class="n">primary_key</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span> <span class="n">table_schema</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">TableHasNoPrimaryKey</span><span class="p">:</span>
+        <span class="n">pk_for_sort</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">columns_list</span> <span class="ow">or</span> <span class="n">columns</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span>
+                                          <span class="n">table_schema</span><span class="o">=</span><span class="n">table_schema</span><span class="p">,</span>
+                                          <span class="n">table_name</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span>
+                                          <span class="n">table_type</span><span class="o">=</span><span class="n">table_type</span><span class="p">,</span>
+                                          <span class="n">remove_pkey</span><span class="o">=</span><span class="n">remove_pkey</span><span class="p">),</span>
+                  <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">col</span><span class="p">,</span> <span class="n">pk_for_sort</span><span class="o">=</span><span class="n">pk_for_sort</span><span class="p">:</span> <span class="n">__column_priority</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="n">pk_for_sort</span><span class="p">))</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">safe_skip_columns</span><span class="p">]</span>
+
+    <span class="c1"># check arguments</span>
+    <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">dict_or_list</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;skip_columns&#39;</span><span class="p">:</span> <span class="n">skip_columns</span><span class="p">,</span>
+                                <span class="s1">&#39;remap_columns&#39;</span><span class="p">:</span> <span class="n">remap_columns</span><span class="p">,</span>
+                                <span class="s1">&#39;columns_on_top&#39;</span><span class="p">:</span> <span class="n">columns_on_top</span><span class="p">,</span>
+                                <span class="s1">&#39;columns_at_end&#39;</span><span class="p">:</span> <span class="n">columns_at_end</span><span class="p">}</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">dict_or_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidColumn</span><span class="p">(</span><span class="s1">&#39;Invalid column in </span><span class="si">{param}</span><span class="s1"> paramater: &quot;</span><span class="si">{tab}</span><span class="s1">&quot; has no column &quot;</span><span class="si">{col}</span><span class="s1">&quot;&#39;</span>
+                                    <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="n">param</span><span class="p">,</span> <span class="n">tab</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">))</span>
+
+    <span class="n">first_column_printed</span> <span class="o">=</span> <span class="p">[</span><span class="n">separate_first</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">print_comma</span><span class="p">(</span><span class="n">first_column_printed</span><span class="p">,</span> <span class="nb">print</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">first_column_printed</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="c1"># we can print in any case</span>
+            <span class="k">return</span> <span class="s1">&#39;, &#39;</span>
+        <span class="k">elif</span> <span class="nb">print</span><span class="p">:</span>
+            <span class="c1"># we start printing commas (i.e. not commenting anymore)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">first_column_printed</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="c1"># this is the first column to be printed =&gt; no comma</span>
+                <span class="n">first_column_printed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s1">&#39;, &#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="k">return</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="si">{indent}</span><span class="s1">&#39;</span>\
+        <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">)</span>\
+        <span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{skip}{comma}{table_alias}</span><span class="s1">.</span><span class="si">{column}{col_alias}</span><span class="s1">&#39;</span>
+              <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">comma</span><span class="o">=</span><span class="n">print_comma</span><span class="p">(</span><span class="n">first_column_printed</span><span class="p">,</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">),</span>
+                      <span class="n">skip</span><span class="o">=</span><span class="s1">&#39;-- &#39;</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">skip_columns</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                      <span class="n">table_alias</span><span class="o">=</span><span class="n">table_alias</span> <span class="ow">or</span> <span class="n">table_name</span><span class="p">,</span>
+                      <span class="n">column</span><span class="o">=</span><span class="n">col</span><span class="p">,</span>
+                      <span class="n">col_alias</span><span class="o">=</span><span class="n">__column_alias</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">remap_columns</span><span class="o">=</span><span class="n">remap_columns</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">prepend_as</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+               <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span> <span class="k">if</span> <span class="p">(</span><span class="n">comment_skipped</span> <span class="ow">or</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">)])</span></div>
+
+
+<div class="viewcode-block" id="insert_command"><a class="viewcode-back" href="../../_autosummary/pirogue.utils.insert_command.html#pirogue.utils.insert_command">[docs]</a><span class="k">def</span> <span class="nf">insert_command</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">:</span> <span class="n">cursor</span><span class="p">,</span>
+                   <span class="n">table_schema</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">table_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;table&quot;</span><span class="p">,</span>
+                   <span class="n">table_alias</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">remove_pkey</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="n">pkey</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">coalesce_pkey_default</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                   <span class="n">skip_columns</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>
+                   <span class="n">comment_skipped</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="n">remap_columns</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                   <span class="n">insert_values</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                   <span class="n">columns_on_top</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>
+                   <span class="n">columns_at_end</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[],</span>
+                   <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">returning</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">indent</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+                   <span class="n">inner_defaults</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{})</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates an INSERT command</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pg_cur</span>
+<span class="sd">        the psycopg cursor</span>
+<span class="sd">    table_schema</span>
+<span class="sd">        the schema</span>
+<span class="sd">    table_name</span>
+<span class="sd">        the name of the table</span>
+<span class="sd">    table_type</span>
+<span class="sd">        the type of table, i.e. view or table</span>
+<span class="sd">    table_alias</span>
+<span class="sd">        the alias of the table</span>
+<span class="sd">    remove_pkey</span>
+<span class="sd">        if True, the primary is removed from the list</span>
+<span class="sd">    pkey</span>
+<span class="sd">         can be manually specified.</span>
+<span class="sd">    coalesce_pkey_default</span>
+<span class="sd">         if True, the following expression is used to insert the primary key: COALESCE( NEW.{pkey}, {default_value} )</span>
+<span class="sd">    skip_columns</span>
+<span class="sd">        list of columns to be skipped</span>
+<span class="sd">    comment_skipped</span>
+<span class="sd">        if True, skipped columns are written but commented, otherwise they are not written</span>
+<span class="sd">    remap_columns</span>
+<span class="sd">        dictionary to remap columns</span>
+<span class="sd">    insert_values</span>
+<span class="sd">        dictionary of expression to be used at insert</span>
+<span class="sd">    columns_on_top</span>
+<span class="sd">         bring the columns to the front of the list</span>
+<span class="sd">    columns_at_end</span>
+<span class="sd">        bring the columns to the end of the list</span>
+<span class="sd">    prefix</span>
+<span class="sd">        add a prefix to the columns (do not applied to remapped columns)</span>
+<span class="sd">    returning</span>
+<span class="sd">        returning command</span>
+<span class="sd">    indent add</span>
+<span class="sd">         an indent in front</span>
+<span class="sd">    inner_defaults</span>
+<span class="sd">        dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">remove_pkey</span> <span class="o">=</span> <span class="n">remove_pkey</span> <span class="ow">and</span> <span class="n">pkey</span> <span class="ow">is</span> <span class="kc">None</span>
+
+    <span class="c1"># get columns</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">pk_for_sort</span> <span class="o">=</span> <span class="n">primary_key</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span> <span class="n">table_schema</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">TableHasNoPrimaryKey</span><span class="p">:</span>
+        <span class="n">pk_for_sort</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">columns</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span>
+                          <span class="n">table_schema</span><span class="o">=</span><span class="n">table_schema</span><span class="p">,</span>
+                          <span class="n">table_name</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span>
+                          <span class="n">table_type</span><span class="o">=</span><span class="n">table_type</span><span class="p">,</span>
+                          <span class="n">remove_pkey</span><span class="o">=</span><span class="n">remove_pkey</span><span class="p">),</span>
+                  <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">col</span><span class="p">,</span> <span class="n">pk_for_sort</span><span class="o">=</span><span class="n">pk_for_sort</span><span class="p">:</span> <span class="n">__column_priority</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="n">pk_for_sort</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">pkey</span> <span class="ow">and</span> <span class="n">remove_pkey</span><span class="p">:</span>
+        <span class="n">cols</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">pkey</span><span class="p">)</span>
+
+    <span class="c1"># if no columns, return NULL</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">([</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;-- Do not insert for </span><span class="si">{}</span><span class="s2"> since all columns are skipped&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">table_name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pkey</span> <span class="ow">and</span> <span class="n">coalesce_pkey_default</span><span class="p">:</span>
+        <span class="n">pkey</span> <span class="o">=</span> <span class="n">primary_key</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span> <span class="n">table_schema</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+
+    <span class="c1"># check arguments</span>
+    <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">dict_or_list</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;skip_columns&#39;</span><span class="p">:</span> <span class="n">skip_columns</span><span class="p">,</span>
+                                <span class="s1">&#39;remap_columns&#39;</span><span class="p">:</span> <span class="n">remap_columns</span><span class="p">,</span>
+                                <span class="s1">&#39;insert_values&#39;</span><span class="p">:</span> <span class="n">insert_values</span><span class="p">,</span>
+                                <span class="s1">&#39;columns_on_top&#39;</span><span class="p">:</span> <span class="n">columns_on_top</span><span class="p">,</span>
+                                <span class="s1">&#39;columns_at_end&#39;</span><span class="p">:</span> <span class="n">columns_at_end</span><span class="p">}</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">dict_or_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidColumn</span><span class="p">(</span><span class="s1">&#39;Invalid column in </span><span class="si">{param}</span><span class="s1"> paramater: &quot;</span><span class="si">{tab}</span><span class="s1">&quot; has no column &quot;</span><span class="si">{col}</span><span class="s1">&quot;&#39;</span>
+                                    <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="n">param</span><span class="p">,</span> <span class="n">tab</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">value</span><span class="p">(</span><span class="n">col</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">insert_values</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{val}</span><span class="s1"> -- </span><span class="si">{ori_col}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">val</span><span class="o">=</span><span class="n">insert_values</span><span class="p">[</span><span class="n">col</span><span class="p">],</span> <span class="n">ori_col</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+        <span class="n">cal</span> <span class="o">=</span> <span class="n">__column_alias</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">remap_columns</span><span class="o">=</span><span class="n">remap_columns</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">field_if_no_alias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">coalesce_pkey_default</span> <span class="ow">and</span> <span class="n">col</span> <span class="o">==</span> <span class="n">pkey</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;COALESCE( NEW.</span><span class="si">{cal}</span><span class="s1">, </span><span class="si">{pk_def}</span><span class="s1"> )&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cal</span><span class="o">=</span><span class="n">cal</span><span class="p">,</span>
+                                                            <span class="n">pk_def</span><span class="o">=</span><span class="n">default_value</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span> <span class="n">table_schema</span><span class="p">,</span> <span class="n">table_name</span><span class="p">,</span> <span class="n">pkey</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">inner_defaults</span><span class="p">:</span>
+            <span class="n">def_col</span> <span class="o">=</span> <span class="n">inner_defaults</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+            <span class="c1"># we don&#39;t use COALESCE to deal with empt strings too</span>
+            <span class="c1"># we use recursion in case we need to call default to obj_id which may be calculated as just above</span>
+            <span class="k">return</span> <span class="s1">&#39;CASE WHEN NEW.</span><span class="si">{cal}</span><span class="s1"> IS NOT NULL AND NEW.</span><span class="si">{cal}</span><span class="s1">::text &lt;&gt; </span><span class="se">\&#39;\&#39;</span><span class="s1"> THEN NEW.</span><span class="si">{cal}</span><span class="s1"> ELSE </span><span class="si">{default}</span><span class="s1"> END&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cal</span><span class="o">=</span><span class="n">cal</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">value</span><span class="p">(</span><span class="n">def_col</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;NEW.</span><span class="si">{cal}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cal</span><span class="o">=</span><span class="n">cal</span><span class="p">)</span>
+
+    <span class="n">next_comma_printed_1</span> <span class="o">=</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span>
+    <span class="n">next_comma_printed_2</span> <span class="o">=</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;&quot;INSERT INTO </span><span class="si">{s}</span><span class="s2">.</span><span class="si">{t}</span><span class="s2"> (</span>
+<span class="si">{indent}</span><span class="s2">      </span><span class="si">{cols}</span><span class="s2"> </span>
+<span class="si">{indent}</span><span class="s2">  ) VALUES ( </span>
+<span class="si">{indent}</span><span class="s2">      </span><span class="si">{new_cols}</span>
+<span class="si">{indent}</span><span class="s2">  )</span><span class="si">{returning}</span><span class="s2">;</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">,</span>
+           <span class="n">s</span><span class="o">=</span><span class="n">table_schema</span><span class="p">,</span>
+           <span class="n">t</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span>
+           <span class="n">cols</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="si">{indent}</span><span class="s1">    &#39;</span>
+                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{skip}{comma}{col}</span><span class="s1">&#39;</span>
+                      <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">,</span>
+                              <span class="n">skip</span><span class="o">=</span><span class="s1">&#39;-- &#39;</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">skip_columns</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                              <span class="n">comma</span><span class="o">=</span><span class="s1">&#39;, &#39;</span> <span class="k">if</span> <span class="n">__print_comma</span><span class="p">(</span><span class="n">next_comma_printed_1</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                              <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">)</span>
+                       <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span> <span class="k">if</span> <span class="p">(</span><span class="n">comment_skipped</span> <span class="ow">or</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">)]),</span>
+           <span class="n">new_cols</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="si">{indent}</span><span class="s1">    &#39;</span>
+                    <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{skip}{comma}{value}</span><span class="s1">&#39;</span>
+                          <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">skip</span><span class="o">=</span><span class="s1">&#39;-- &#39;</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">skip_columns</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                                  <span class="n">comma</span><span class="o">=</span><span class="s1">&#39;, &#39;</span> <span class="k">if</span> <span class="n">__print_comma</span><span class="p">(</span><span class="n">next_comma_printed_2</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                                  <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
+                           <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span> <span class="k">if</span> <span class="p">(</span><span class="n">comment_skipped</span> <span class="ow">or</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">)]),</span>
+           <span class="n">returning</span><span class="o">=</span><span class="s1">&#39; RETURNING </span><span class="si">{returning}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">returning</span><span class="o">=</span><span class="n">returning</span><span class="p">)</span> <span class="k">if</span> <span class="n">returning</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="update_command"><a class="viewcode-back" href="../../_autosummary/pirogue.utils.update_command.html#pirogue.utils.update_command">[docs]</a><span class="k">def</span> <span class="nf">update_command</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">:</span> <span class="n">cursor</span><span class="p">,</span>
+                   <span class="n">table_schema</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">table_alias</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">table_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;table&#39;</span><span class="p">,</span>
+                   <span class="n">remove_pkey</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="n">pkey</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">skip_columns</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">[],</span>
+                   <span class="n">comment_skipped</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                   <span class="n">remap_columns</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                   <span class="n">update_values</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                   <span class="n">columns_on_top</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">[],</span>
+                   <span class="n">columns_at_end</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">[],</span>
+                   <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">where_clause</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">indent</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                   <span class="n">inner_defaults</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{})</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates an UPDATE command</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pg_cur</span>
+<span class="sd">         the psycopg cursor</span>
+<span class="sd">    table_schema</span>
+<span class="sd">         the schema</span>
+<span class="sd">    table_name</span>
+<span class="sd">         the name of the table</span>
+<span class="sd">    table_type</span>
+<span class="sd">        the type of table, i.e. view or table</span>
+<span class="sd">    remove_pkey</span>
+<span class="sd">        if True, the primary key will also be updated</span>
+<span class="sd">    pkey</span>
+<span class="sd">        can be manually specified.</span>
+<span class="sd">    table_alias</span>
+<span class="sd">         if not specified, table is used</span>
+<span class="sd">    skip_columns</span>
+<span class="sd">        list of columns to be skipped</span>
+<span class="sd">    comment_skipped</span>
+<span class="sd">        if True, skipped columns are written but commented, otherwise they are not written</span>
+<span class="sd">    remap_columns</span>
+<span class="sd">        dictionary to remap columns</span>
+<span class="sd">    update_values</span>
+<span class="sd">        dictionary of expression to be used at insert</span>
+<span class="sd">    columns_on_top</span>
+<span class="sd">         bring the columns to the front of the list</span>
+<span class="sd">    columns_at_end</span>
+<span class="sd">         bring the columns to the end of the list</span>
+<span class="sd">    prefix</span>
+<span class="sd">        add a prefix to the columns (do not applied to remapped columns)</span>
+<span class="sd">    where_clause</span>
+<span class="sd">         can be manually specified</span>
+<span class="sd">    indent</span>
+<span class="sd">         add an indent in front</span>
+<span class="sd">    inner_defaults</span>
+<span class="sd">         dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    the SQL command</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">remove_pkey</span> <span class="o">=</span> <span class="n">remove_pkey</span> <span class="ow">and</span> <span class="n">pkey</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">where_clause</span> <span class="ow">is</span> <span class="kc">None</span>
+    <span class="c1"># get columns</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">pk_for_sort</span> <span class="o">=</span> <span class="n">primary_key</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span> <span class="n">table_schema</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">TableHasNoPrimaryKey</span><span class="p">:</span>
+        <span class="n">pk_for_sort</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">columns</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span>
+                          <span class="n">table_schema</span><span class="o">=</span><span class="n">table_schema</span><span class="p">,</span>
+                          <span class="n">table_name</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span>
+                          <span class="n">table_type</span><span class="o">=</span><span class="n">table_type</span><span class="p">,</span>
+                          <span class="n">remove_pkey</span><span class="o">=</span><span class="n">remove_pkey</span><span class="p">),</span>
+                  <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_col</span><span class="p">,</span> <span class="n">pk_for_sort</span><span class="o">=</span><span class="n">pk_for_sort</span><span class="p">:</span> <span class="n">__column_priority</span><span class="p">(</span><span class="n">_col</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="n">pk_for_sort</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">pkey</span> <span class="ow">and</span> <span class="n">remove_pkey</span><span class="p">:</span>
+        <span class="n">cols</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">pkey</span><span class="p">)</span>
+
+    <span class="c1"># if no columns, return NULL</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">([</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;-- Do not update for </span><span class="si">{}</span><span class="s2"> since all columns are skipped&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">table_name</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pkey</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">where_clause</span><span class="p">:</span>
+        <span class="n">pkey</span> <span class="o">=</span> <span class="n">primary_key</span><span class="p">(</span><span class="n">pg_cur</span><span class="p">,</span> <span class="n">table_schema</span><span class="p">,</span> <span class="n">table_name</span><span class="p">)</span>
+
+    <span class="c1"># check arguments</span>
+    <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">dict_or_list</span> <span class="ow">in</span> <span class="p">{</span><span class="s1">&#39;skip_columns&#39;</span><span class="p">:</span> <span class="n">skip_columns</span><span class="p">,</span>
+                                <span class="s1">&#39;remap_columns&#39;</span><span class="p">:</span> <span class="n">remap_columns</span><span class="p">,</span>
+                                <span class="s1">&#39;update_values&#39;</span><span class="p">:</span> <span class="n">update_values</span><span class="p">,</span>
+                                <span class="s1">&#39;columns_on_top&#39;</span><span class="p">:</span> <span class="n">columns_on_top</span><span class="p">,</span>
+                                <span class="s1">&#39;columns_at_end&#39;</span><span class="p">:</span> <span class="n">columns_at_end</span><span class="p">}</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">dict_or_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cols</span> <span class="ow">and</span> <span class="n">col</span> <span class="o">!=</span> <span class="n">pkey</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidColumn</span><span class="p">(</span><span class="s1">&#39;Invalid column in </span><span class="si">{param}</span><span class="s1"> paramater: &quot;</span><span class="si">{tab}</span><span class="s1">&quot; has no column &quot;</span><span class="si">{col}</span><span class="s1">&quot;&#39;</span>
+                                    <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="n">param</span><span class="p">,</span> <span class="n">tab</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">))</span>
+
+    <span class="n">next_comma_printed</span> <span class="o">=</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">value</span><span class="p">(</span><span class="n">col</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">update_values</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">update_values</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+        <span class="n">cal</span> <span class="o">=</span> <span class="n">__column_alias</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">remap_columns</span><span class="o">=</span><span class="n">remap_columns</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span> <span class="n">field_if_no_alias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">inner_defaults</span><span class="p">:</span>
+            <span class="n">def_col</span> <span class="o">=</span> <span class="n">inner_defaults</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+            <span class="c1"># we don&#39;t use COALESCE to deal with empt strings too</span>
+            <span class="c1"># we use recursion in case we need to call default to obj_id which may be calculated as just above</span>
+            <span class="k">return</span> <span class="s1">&#39;CASE WHEN NEW.</span><span class="si">{cal}</span><span class="s1"> IS NOT NULL AND NEW.</span><span class="si">{cal}</span><span class="s1">::text &lt;&gt; </span><span class="se">\&#39;\&#39;</span><span class="s1"> THEN NEW.</span><span class="si">{cal}</span><span class="s1"> ELSE </span><span class="si">{default}</span><span class="s1"> END&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cal</span><span class="o">=</span><span class="n">cal</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">value</span><span class="p">(</span><span class="n">def_col</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;NEW.</span><span class="si">{cal}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cal</span><span class="o">=</span><span class="n">cal</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="s2">&quot;&quot;&quot;UPDATE </span><span class="si">{s}</span><span class="s2">.</span><span class="si">{t}{a}</span><span class="s2"> SET</span>
+<span class="si">{indent}</span><span class="s2">    </span><span class="si">{cols}</span>
+<span class="si">{indent}</span><span class="s2">  WHERE </span><span class="si">{where_clause}</span><span class="s2">;&quot;&quot;&quot;</span>\
+        <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">,</span>
+                <span class="n">s</span><span class="o">=</span><span class="n">table_schema</span><span class="p">,</span>
+                <span class="n">t</span><span class="o">=</span><span class="n">table_name</span><span class="p">,</span>
+                <span class="n">a</span><span class="o">=</span><span class="s1">&#39; </span><span class="si">{alias}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">alias</span><span class="o">=</span><span class="n">table_alias</span><span class="p">)</span> <span class="k">if</span> <span class="n">table_alias</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">cols</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="si">{indent}</span><span class="s1">    &#39;</span>
+                     <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+                     <span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{skip}{comma}{col}</span><span class="s1"> = </span><span class="si">{new_col}</span><span class="s1">&#39;</span>
+                                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">indent</span><span class="o">=</span><span class="n">indent</span><span class="o">*</span><span class="s1">&#39; &#39;</span><span class="p">,</span>
+                                        <span class="n">skip</span><span class="o">=</span><span class="s1">&#39;-- &#39;</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">skip_columns</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                                        <span class="n">comma</span><span class="o">=</span><span class="s1">&#39;, &#39;</span> <span class="k">if</span> <span class="n">__print_comma</span><span class="p">(</span><span class="n">next_comma_printed</span><span class="p">,</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                                        <span class="n">col</span><span class="o">=</span><span class="n">col</span><span class="p">,</span>
+                                        <span class="n">new_col</span><span class="o">=</span><span class="n">value</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
+                                <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span> <span class="k">if</span> <span class="p">(</span><span class="n">comment_skipped</span> <span class="ow">or</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip_columns</span><span class="p">)]),</span>
+                <span class="n">where_clause</span><span class="o">=</span><span class="n">where_clause</span> <span class="ow">or</span> <span class="s1">&#39;</span><span class="si">{pkey}</span><span class="s1"> = </span><span class="si">{pkal}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pkey</span><span class="o">=</span><span class="n">pkey</span><span class="p">,</span>
+                                                                      <span class="n">pkal</span><span class="o">=</span><span class="n">update_values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pkey</span><span class="p">,</span>
+                                                                                             <span class="s1">&#39;OLD.</span><span class="si">{cal}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cal</span><span class="o">=</span><span class="n">__column_alias</span><span class="p">(</span><span class="n">pkey</span><span class="p">,</span>
+                                                                                                                                   <span class="n">remap_columns</span><span class="o">=</span><span class="n">remap_columns</span><span class="p">,</span>
+                                                                                                                                   <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span>
+                                                                                                                                   <span class="n">field_if_no_alias</span><span class="o">=</span><span class="kc">True</span><span class="p">)))))</span></div>
+
+
+<span class="k">def</span> <span class="nf">__column_alias</span><span class="p">(</span><span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">remap_columns</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
+                   <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">field_if_no_alias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                   <span class="n">prepend_as</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    table_alias</span>
+<span class="sd">    column</span>
+<span class="sd">    field_if_no_alias if True, return the field if the alias doesn&#39;t exist. If False return an empty string</span>
+<span class="sd">    prepend_as prepend &quot; AS &quot; to the alias</span>
+<span class="sd">    :return: empty string if there is no alias and (i.e = field name)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">col_alias</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">remap_columns</span><span class="p">:</span>
+        <span class="n">col_alias</span> <span class="o">=</span> <span class="n">remap_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">prefix</span><span class="p">:</span>
+        <span class="n">col_alias</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">column</span>
+    <span class="k">elif</span> <span class="n">field_if_no_alias</span><span class="p">:</span>
+        <span class="n">col_alias</span> <span class="o">=</span> <span class="n">column</span>
+    <span class="k">if</span> <span class="n">prepend_as</span> <span class="ow">and</span> <span class="n">col_alias</span><span class="p">:</span>
+        <span class="n">col_alias</span> <span class="o">=</span> <span class="s1">&#39; AS </span><span class="si">{al}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">al</span><span class="o">=</span><span class="n">col_alias</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">col_alias</span>
+
+
+<span class="k">def</span> <span class="nf">__column_priority</span><span class="p">(</span><span class="n">column</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">columns_on_top</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">[],</span> <span class="n">columns_at_end</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">[],</span> <span class="n">primary_key</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a value to sort columns first the primary key, then by priority (on top / at end), then alphabetically</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">primary_key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">primary_key</span> <span class="o">==</span> <span class="n">column</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns_on_top</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns_at_end</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">column</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">__print_comma</span><span class="p">(</span><span class="n">next_comma_printed</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">is_skipped</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determines if a comma should be printed</span>
+<span class="sd">    next_comma_printed a list with a single boolean (works by reference)</span>
+<span class="sd">    is_skipped</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">is_skipped</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">next_comma_printed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">next_comma_printed</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">next_comma_printed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2021, Denis Rouzaud.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

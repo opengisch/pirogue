@@ -1,0 +1,23 @@
+﻿pirogue.SingleInheritance
+=========================
+
+.. currentmodule:: pirogue
+
+.. autoclass:: SingleInheritance
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SingleInheritance.__init__
+      ~SingleInheritance.create
+   
+   
+
+   
+   
+   

@@ -1,0 +1,6 @@
+﻿pirogue.utils.select\_columns
+=============================
+
+.. currentmodule:: pirogue.utils
+
+.. autofunction:: select_columns

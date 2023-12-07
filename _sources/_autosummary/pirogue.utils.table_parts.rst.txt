@@ -1,0 +1,6 @@
+﻿pirogue.utils.table\_parts
+==========================
+
+.. currentmodule:: pirogue.utils
+
+.. autofunction:: table_parts
