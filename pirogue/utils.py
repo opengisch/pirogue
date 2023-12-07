@@ -79,7 +79,7 @@ def select_columns(pg_cur: cursor,
      prepend_as
         prepend the 'AS '  
     alias_separator
-        separator between table_alias and value      
+        separator between table_alias and column      
     """
     try:
         pk_for_sort = primary_key(pg_cur, table_schema, table_name)
