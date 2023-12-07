@@ -21,6 +21,7 @@ repos:
           - "--in-place"
           - "--remove-all-unused-imports"
           - "--remove-unused-variables"
+          - "--ignore-init-module-imports"
 
   # Sort imports
   - repo: https://github.com/pycqa/isort
@@ -52,6 +53,7 @@ repos:
           "--max-line-length=115",
           # ignore long comments (E501), as long lines are formatted by black
           "--ignore=E501,E203,W503",
+          "--per-file-ignores=__init__.py:F401",
         ]
 
 #    # Static type-checking with mypy
