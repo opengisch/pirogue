@@ -1,19 +1,20 @@
 #! /usr/bin/env python
 
 import unittest
-import yaml
+
 import psycopg2
 import psycopg2.extras
-from pirogue import SimpleJoins, MultipleInheritance
+import yaml
+
+from pirogue import MultipleInheritance, SimpleJoins
 from pirogue.exceptions import InvalidDefinition
 
-pg_service = 'pirogue_test'
+pg_service = "pirogue_test"
 
 
 class TestSimpleJoins(unittest.TestCase):
-
     def setUp(self):
-        self.conn = psycopg2.connect("service={0}".format(pg_service))
+        self.conn = psycopg2.connect(f"service={pg_service}")
         self.cur = self.conn.cursor()
 
         sql = open("test/demo_data.sql").read()
@@ -35,7 +36,7 @@ class TestSimpleJoins(unittest.TestCase):
 
     def test_invalid_definition(self):
         yaml_definition = yaml.safe_load(open("test/simple_joins.yaml"))
-        yaml_definition['MyBadKey'] = 'Ouch'
+        yaml_definition["MyBadKey"] = "Ouch"
         error_caught = False
         try:
             SimpleJoins(yaml_definition, pg_service=pg_service).create()
@@ -44,5 +45,5 @@ class TestSimpleJoins(unittest.TestCase):
         self.assertTrue(error_caught)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
