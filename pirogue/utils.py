@@ -35,7 +35,9 @@ def select_columns(pg_cur: cursor,
                    columns_at_end: list = [],
                    prefix: str = None,
                    indent: int = 2,
-                   separate_first: bool = False) -> str:
+                   separate_first: bool = False,
+                   prepend_as: bool = True,
+                   alias_separator: str = '.') -> str:
     """
     Returns the list of columns to be used in a SELECT command
 
@@ -74,6 +76,10 @@ def select_columns(pg_cur: cursor,
         add an indent in front
     separate_first
         separate the first column with a comma
+     prepend_as
+        prepend the 'AS '  
+    alias_separator
+        separator between table_alias and value      
     """
     try:
         pk_for_sort = primary_key(pg_cur, table_schema, table_name)
@@ -116,12 +122,13 @@ def select_columns(pg_cur: cursor,
 
     return '\n{indent}'\
         .format(indent=indent*' ')\
-        .join(['{skip}{comma}{table_alias}.{column}{col_alias}'
+        .join(['{skip}{comma}{table_alias}{alias_separator}{column}{col_alias}'
               .format(comma=print_comma(first_column_printed, col not in skip_columns),
                       skip='-- ' if col in skip_columns else '',
                       table_alias=table_alias or table_name,
+                      alias_separator=alias_separator,
                       column=col,
-                      col_alias=__column_alias(col, remap_columns=remap_columns, prefix=prefix, prepend_as=True))
+                      col_alias=__column_alias(col, remap_columns=remap_columns, prefix=prefix, prepend_as=prepend_as))
                for col in cols if (comment_skipped or col not in skip_columns)])
 
 
