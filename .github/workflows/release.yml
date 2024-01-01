@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Retrieve artifact from Python build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python_wheel
           path: dist/
@@ -53,7 +53,7 @@ jobs:
 
     steps:
       - name: Retrieve artifact from Python build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python_wheel
           path: dist/
