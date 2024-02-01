@@ -24,7 +24,7 @@ jobs:
         pip install -r docs/requirements.txt
 
     - name: Cache pip
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: pip-${{ hashFiles('requirements.txt') }}-${{ hashFiles('docs/requirements.txt') }}
