@@ -192,7 +192,7 @@ class MultipleInheritance:
                 continue
             try:
                 if self.variables:
-                    self.cursor.execute(sql, self.variables)
+                    self.cursor.execute(psycopg.sql.SQL(sql).format(self.variables))
                 else:
                     self.cursor.execute(sql)
             except TypeError:
