@@ -1,7 +1,6 @@
 import os
 
-import psycopg2
-import psycopg2.extras
+import psycopg
 
 from pirogue.exceptions import InvalidDefinition, NoReferenceFound, TableHasNoPrimaryKey
 from pirogue.information_schema import primary_key, reference_columns
@@ -44,7 +43,7 @@ class SimpleJoins:
 
         if pg_service is None:
             pg_service = os.getenv("PGSERVICE")
-        self.conn = psycopg2.connect(f"service={pg_service}")
+        self.conn = psycopg.connect(f"service={pg_service}")
         self.cursor = self.conn.cursor()
 
         (self.parent_schema, self.parent_table) = table_parts(definition["table"])
@@ -98,7 +97,7 @@ class SimpleJoins:
         success = True
         try:
             self.cursor.execute(sql)
-        except psycopg2.Error as e:
+        except psycopg.Error as e:
             success = False
             print(f"*** Failing:\n{sql}\n***")
             raise e
