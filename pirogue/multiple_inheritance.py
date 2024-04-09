@@ -448,14 +448,16 @@ CREATE TRIGGER tr_{vn}_on_insert
                     for alias, table_def in sorted_joins
                 ]
             ),
-            raise_notice="NULL;"
-            if self.allow_parent_only
-            else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR".format(
-                vn=self.view_name,
-                percent_char="%%"
-                if self.variables
-                else "%",  # if variables, % should be escaped because cursor.execute is run with variables
-                type_name=self.type_name,
+            raise_notice=(
+                "NULL;"
+                if self.allow_parent_only
+                else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR".format(
+                    vn=self.view_name,
+                    percent_char=(
+                        "%%" if self.variables else "%"
+                    ),  # if variables, % should be escaped because cursor.execute is run with variables
+                    type_name=self.type_name,
+                )
             ),
             insert_trigger_post=self.insert_trigger.get("post", ""),
         )
@@ -508,51 +510,53 @@ CREATE TRIGGER tr_{vn}_on_update
                 indent=8,
             ),
             type_name=self.type_name,
-            type_change="RAISE EXCEPTION 'Type change not allowed for {alias}'"
-            "\n      USING HINT = 'You cannot switch from ' "
-            "|| OLD.{type_name} || ' to ' || NEW.{type_name};".format(
-                alias=self.view_alias, type_name=self.type_name
-            )
-            if not self.allow_type_change
-            else "CASE"
-            "\n      {deletes}"
-            "\n    END CASE;"
-            "\n    CASE"
-            "\n      {inserts}"
-            "\n      ELSE -- do nothing"
-            "\n    END CASE;".format(
-                deletes="\n      ".join(
-                    [
-                        "WHEN OLD.{type_name} = '{alias}'::{vs}.{type_name} "
-                        "THEN DELETE FROM {ts}.{tn} "
-                        "WHERE {rmk} = OLD.{mpk};".format(
-                            type_name=self.type_name,
-                            alias=alias,
-                            vs=self.view_schema,
-                            ts=table_def["table_schema"],
-                            tn=table_def["table_name"],
-                            rmk=table_def["ref_master_key"],
-                            mpk=self.master_pkey,
-                        )
-                        for alias, table_def in sorted_joins
-                    ]
-                ),
-                inserts="\n      ".join(
-                    [
-                        "WHEN NEW.{type_name} = '{alias}'::{vs}.{type_name} "
-                        "THEN INSERT INTO {ts}.{tn} "
-                        "({rmk}) VALUES (OLD.{mpk});".format(
-                            type_name=self.type_name,
-                            alias=alias,
-                            vs=self.view_schema,
-                            ts=table_def["table_schema"],
-                            tn=table_def["table_name"],
-                            rmk=table_def["ref_master_key"],
-                            mpk=self.master_pkey,
-                        )
-                        for alias, table_def in sorted_joins
-                    ]
-                ),
+            type_change=(
+                "RAISE EXCEPTION 'Type change not allowed for {alias}'"
+                "\n      USING HINT = 'You cannot switch from ' "
+                "|| OLD.{type_name} || ' to ' || NEW.{type_name};".format(
+                    alias=self.view_alias, type_name=self.type_name
+                )
+                if not self.allow_type_change
+                else "CASE"
+                "\n      {deletes}"
+                "\n    END CASE;"
+                "\n    CASE"
+                "\n      {inserts}"
+                "\n      ELSE -- do nothing"
+                "\n    END CASE;".format(
+                    deletes="\n      ".join(
+                        [
+                            "WHEN OLD.{type_name} = '{alias}'::{vs}.{type_name} "
+                            "THEN DELETE FROM {ts}.{tn} "
+                            "WHERE {rmk} = OLD.{mpk};".format(
+                                type_name=self.type_name,
+                                alias=alias,
+                                vs=self.view_schema,
+                                ts=table_def["table_schema"],
+                                tn=table_def["table_name"],
+                                rmk=table_def["ref_master_key"],
+                                mpk=self.master_pkey,
+                            )
+                            for alias, table_def in sorted_joins
+                        ]
+                    ),
+                    inserts="\n      ".join(
+                        [
+                            "WHEN NEW.{type_name} = '{alias}'::{vs}.{type_name} "
+                            "THEN INSERT INTO {ts}.{tn} "
+                            "({rmk}) VALUES (OLD.{mpk});".format(
+                                type_name=self.type_name,
+                                alias=alias,
+                                vs=self.view_schema,
+                                ts=table_def["table_schema"],
+                                tn=table_def["table_name"],
+                                rmk=table_def["ref_master_key"],
+                                mpk=self.master_pkey,
+                            )
+                            for alias, table_def in sorted_joins
+                        ]
+                    ),
+                )
             ),
             update_joins="\n    ".join(
                 [
@@ -580,14 +584,16 @@ CREATE TRIGGER tr_{vn}_on_update
                     for alias, table_def in sorted_joins
                 ]
             ),
-            raise_notice="NULL;"
-            if self.allow_parent_only
-            else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR".format(
-                vn=self.view_name,
-                percent_char="%%"
-                if self.variables
-                else "%",  # if variables, % should be escaped because cursor.execute is run with variables
-                type_name=self.type_name,
+            raise_notice=(
+                "NULL;"
+                if self.allow_parent_only
+                else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR".format(
+                    vn=self.view_name,
+                    percent_char=(
+                        "%%" if self.variables else "%"
+                    ),  # if variables, % should be escaped because cursor.execute is run with variables
+                    type_name=self.type_name,
+                )
             ),
             update_trigger_post=self.update_trigger.get("post", ""),
         )
