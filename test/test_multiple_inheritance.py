@@ -2,8 +2,7 @@
 
 import unittest
 
-import psycopg2
-import psycopg2.extras
+import psycopg
 import yaml
 
 from pirogue import MultipleInheritance
@@ -15,7 +14,7 @@ pg_service = "pirogue_test"
 
 class TestMultipleInheritance(unittest.TestCase):
     def setUp(self):
-        self.conn = psycopg2.connect(f"service={pg_service}")
+        self.conn = psycopg.connect(f"service={pg_service}")
         self.cur = self.conn.cursor()
 
         sql = open("test/demo_data.sql").read()
@@ -68,7 +67,7 @@ class TestMultipleInheritance(unittest.TestCase):
             self.cur.execute(
                 "UPDATE pirogue_test.vw_animal_no_type_change SET animal_type = 'cat';"
             )
-        except psycopg2.errors.RaiseException:
+        except psycopg.errors.RaiseException:
             error_caught = True
         self.assertTrue(error_caught)
 

@@ -1,4 +1,4 @@
-from psycopg2.extensions import cursor
+from psycopg import Cursor
 
 from pirogue.exceptions import (
     InvalidSkipColumns,
@@ -7,7 +7,7 @@ from pirogue.exceptions import (
 )
 
 
-def primary_key(pg_cur: cursor, schema_name: str, table_name: str) -> str:
+def primary_key(pg_cur: Cursor, schema_name: str, table_name: str) -> str:
     """
     Returns the primary of a table
 
@@ -38,7 +38,7 @@ def primary_key(pg_cur: cursor, schema_name: str, table_name: str) -> str:
 
 
 def columns(
-    pg_cur: cursor,
+    pg_cur: Cursor,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
@@ -106,7 +106,7 @@ def columns(
 
 
 def reference_columns(
-    pg_cur: cursor,
+    pg_cur: Cursor,
     table_schema: str,
     table_name: str,
     foreign_table_schema: str,
@@ -157,7 +157,7 @@ def reference_columns(
     return cols
 
 
-def default_value(pg_cur: cursor, table_schema: str, table_name: str, column: str) -> str:
+def default_value(pg_cur: Cursor, table_schema: str, table_name: str, column: str) -> str:
     """
     Returns the default value of the column
 
@@ -188,7 +188,7 @@ def default_value(pg_cur: cursor, table_schema: str, table_name: str, column: st
 
 
 def geometry_type(
-    pg_cur: cursor, table_schema: str, table_name: str, column: str = "geometry"
+    pg_cur: Cursor, table_schema: str, table_name: str, column: str = "geometry"
 ) -> (str, int):
     """
     Returns the geometry type of a column as a tuple (type, srid)

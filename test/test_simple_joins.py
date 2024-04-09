@@ -2,8 +2,7 @@
 
 import unittest
 
-import psycopg2
-import psycopg2.extras
+import psycopg
 import yaml
 
 from pirogue import MultipleInheritance, SimpleJoins
@@ -14,7 +13,7 @@ pg_service = "pirogue_test"
 
 class TestSimpleJoins(unittest.TestCase):
     def setUp(self):
-        self.conn = psycopg2.connect(f"service={pg_service}")
+        self.conn = psycopg.connect(f"service={pg_service}")
         self.cur = self.conn.cursor()
 
         sql = open("test/demo_data.sql").read()

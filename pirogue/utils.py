@@ -1,4 +1,4 @@
-from psycopg2.extensions import cursor
+from psycopg import Cursor
 
 from pirogue.exceptions import InvalidColumn, TableHasNoPrimaryKey
 from pirogue.information_schema import columns, default_value, primary_key
@@ -20,7 +20,7 @@ def table_parts(name: str) -> (str, str):
 
 
 def select_columns(
-    pg_cur: cursor,
+    pg_cur: Cursor,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
@@ -143,7 +143,7 @@ def select_columns(
 
 
 def insert_command(
-    pg_cur: cursor,
+    pg_cur: Cursor,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
@@ -199,8 +199,8 @@ def insert_command(
         add a prefix to the columns (do not applied to remapped columns)
     returning
         returning command
-    indent add
-         an indent in front
+    indent
+         add an indent in front
     inner_defaults
         dictionary of other columns to default to in case the provided value is null (can be used instead of insert_values to make it easier to reuse other columns definitions)
     """
@@ -306,7 +306,7 @@ def insert_command(
 
 
 def update_command(
-    pg_cur: cursor,
+    pg_cur: Cursor,
     table_schema: str,
     table_name: str,
     table_alias: str = None,
