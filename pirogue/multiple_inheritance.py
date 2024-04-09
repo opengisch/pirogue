@@ -4,6 +4,9 @@ try:
     import psycopg
 except ImportError:
     import psycopg2 as psycopg
+    import psycopg2.sql as __sql
+
+    psycopg.sql = __sql
 
 from pirogue.exceptions import InvalidDefinition, TableHasNoPrimaryKey, VariableError
 from pirogue.information_schema import (
