@@ -188,14 +188,14 @@ class MultipleInheritance:
         queries.append(self.__delete_trigger())
         queries.append(self.__extras())
 
-        for sql in queries:
-            if not sql:
+        for _sql in queries:
+            if not _sql:
                 continue
             try:
-                self.cursor.execute(psycopg.sql.SQL(sql).format(self.variables))
+                self.cursor.execute(psycopg.sql.SQL(_sql).format(**self.variables))
             except (TypeError, KeyError):
                 success = False
-                print(f"*** Failing:\n{sql}\n***")
+                print(f"*** Failing:\n{_sql}\n***")
                 raise VariableError(
                     "An error in a SQL variable is probable. "
                     "Check the variables in the SQL code "
@@ -205,7 +205,7 @@ class MultipleInheritance:
                     )
                 )
             except psycopg.Error as e:
-                print(f"*** Failing:\n{sql}\n***")
+                print(f"*** Failing:\n{_sql}\n***")
                 raise e
         self.conn.commit()
         self.conn.close()
