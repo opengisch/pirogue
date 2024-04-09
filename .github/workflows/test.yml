@@ -17,7 +17,8 @@ jobs:
 
     strategy:
       matrix:
-        pg-version: ['9.6', '10', '11']
+        psycopg-version: [2, 3]
+        pg-version: [12, 13, 14, 15, 16]
       fail-fast: true
 
     # Service containers to run with `runner-job`
@@ -59,9 +60,10 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install -r requirements-test.txt
+          pip install -r requirements-psycopg${{ matrix.psycopg-version }}.txt
 
       - name: Install pirogue
-        run: python -m pip install -e .
+        run: python -m pip install -e .[psycopg${{ matrix.psycopg-version }}]
 
       - name: Setup tests
         run: |

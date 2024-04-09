@@ -2,7 +2,11 @@
 
 import unittest
 
-import psycopg
+try:
+    import psycopg
+except ImportError:
+    import psycopg2 as psycopg
+
 import yaml
 
 from pirogue import MultipleInheritance, SimpleJoins

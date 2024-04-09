@@ -1,4 +1,7 @@
-from psycopg import Cursor
+try:
+    from psycopg import Cursor
+except ImportError:
+    from psycopg2.extensions import cursor as Cursor
 
 from pirogue.exceptions import (
     InvalidSkipColumns,
