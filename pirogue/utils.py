@@ -1,4 +1,7 @@
-from psycopg import Cursor
+try:
+    from psycopg import Cursor
+except ImportError:
+    from psycopg2.extensions import cursor as Cursor
 
 from pirogue.exceptions import InvalidColumn, TableHasNoPrimaryKey
 from pirogue.information_schema import columns, default_value, primary_key
