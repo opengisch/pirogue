@@ -163,8 +163,8 @@ class MultipleInheritance:
                     self.cursor, table_def["table_schema"], table_def["table_name"], col
                 )
                 if gt:
-                    self.merge_column_cast[col] = "::geometry({type},{srid})".format(
-                        type=gt[0], srid=gt[1]
+                    self.merge_column_cast[col] = "::geometry({_type},{_srid})".format(
+                        _type=gt[0], _srid=gt[1]
                     )
                     break
             if col not in self.merge_column_cast:
@@ -191,10 +191,7 @@ class MultipleInheritance:
             if not sql:
                 continue
             try:
-                if self.variables:
-                    self.cursor.execute(psycopg.sql.SQL(sql).format(self.variables))
-                else:
-                    self.cursor.execute(sql)
+                self.cursor.execute(psycopg.sql.SQL(sql).format(self.variables))
             except TypeError:
                 success = False
                 print(f"*** Failing:\n{sql}\n***")
