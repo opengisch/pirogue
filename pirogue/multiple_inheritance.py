@@ -1,3 +1,4 @@
+import copy
 import os
 
 import psycopg
@@ -49,7 +50,7 @@ class MultipleInheritance:
             if True, will drop any existing view, type or trigger that will be created later
         """
 
-        self.variables = variables
+        self.variables = copy.deepcopy(variables)
         self.create_joins = create_joins
         self.drop = drop
 
