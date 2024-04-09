@@ -193,7 +193,7 @@ class MultipleInheritance:
                 continue
             try:
                 self.cursor.execute(psycopg.sql.SQL(sql).format(self.variables))
-            except TypeError:
+            except (TypeError, KeyError):
                 success = False
                 print(f"*** Failing:\n{sql}\n***")
                 raise VariableError(
