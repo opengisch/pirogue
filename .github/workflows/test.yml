@@ -63,7 +63,7 @@ jobs:
           pip install -r requirements-psycopg${{ matrix.psycopg-version }}.txt
 
       - name: Install pirogue
-        run: python -m pip install -e[psycopg${{ matrix.psycopg-version }}] .
+        run: python -m pip install -e .[psycopg${{ matrix.psycopg-version }}]
 
       - name: Setup tests
         run: |
