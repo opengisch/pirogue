@@ -450,11 +450,8 @@ CREATE TRIGGER tr_{vn}_on_insert
             raise_notice=(
                 "NULL;"
                 if self.allow_parent_only
-                else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR".format(
+                else "RAISE NOTICE '{vn} type not known (%)', NEW.{type_name}; -- ERROR".format(
                     vn=self.view_name,
-                    percent_char=(
-                        "%%" if self.variables else "%"
-                    ),  # if variables, % should be escaped because cursor.execute is run with variables
                     type_name=self.type_name,
                 )
             ),
@@ -586,11 +583,8 @@ CREATE TRIGGER tr_{vn}_on_update
             raise_notice=(
                 "NULL;"
                 if self.allow_parent_only
-                else "RAISE NOTICE '{vn} type not known ({percent_char})', NEW.{type_name}; -- ERROR".format(
+                else "RAISE NOTICE '{vn} type not known (%)', NEW.{type_name}; -- ERROR".format(
                     vn=self.view_name,
-                    percent_char=(
-                        "%%" if self.variables else "%"
-                    ),  # if variables, % should be escaped because cursor.execute is run with variables
                     type_name=self.type_name,
                 )
             ),
