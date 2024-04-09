@@ -17,6 +17,7 @@ jobs:
 
     strategy:
       matrix:
+        psycopg-version: [2, 3]
         pg-version: ['9.6', '10', '11']
       fail-fast: true
 
@@ -59,9 +60,10 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install -r requirements-test.txt
+          pip install -r requirements-psycopg${{ matrix.psycopg-version }}.txt
 
       - name: Install pirogue
-        run: python -m pip install -e .
+        run: python -m pip install -e[psycopg${{ matrix.psycopg-version }}] .
 
       - name: Setup tests
         run: |

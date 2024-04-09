@@ -36,6 +36,8 @@ enabled = true
 readme = {file = ["README.md"], content-type = "text/markdown"}
 dependencies = {file = ["requirements.txt"]}
 optional-dependencies.test = {file = ["requirements-test.txt"]}
+optional-dependencies.psycopg2 = {file = ["requirements-psycopg2.txt"]}
+optional-dependencies.psycopg3 = {file = ["requirements-psycopg3.txt"]}
 
 [tool.isort]
 profile = "black"
