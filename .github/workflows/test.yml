@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         psycopg-version: [2, 3]
-        pg-version: ['9.6', '10', '11']
+        pg-version: [12, 13, 14, 15, 16]
       fail-fast: true
 
     # Service containers to run with `runner-job`
