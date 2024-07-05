@@ -29,10 +29,10 @@ RESULT=$(psql ${PSQL_ARGS} -c "SELECT COUNT(*) FROM pirogue_test.vw_animal_cat;"
 EXPECTED=0
 if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
 
-echo "test insert without pkey value (getting default from parent table)"
+echo "test insert without pkey value (getting default from child table)"
 psql --quiet -v ON_ERROR_STOP="on" -c "INSERT into pirogue_test.vw_animal_cat (fk_breed, eye_color, name, year) VALUES ('1', 'yellow', 'ninja', 1934);"
 RESULT=$(psql ${PSQL_ARGS} -c "SELECT cid FROM pirogue_test.vw_animal_cat")
-EXPECTED=1101
+EXPECTED=2101
 if [[ ${RESULT} =~ "${EXPECTED}" ]]; then echo "ok"; else echo "*** ERROR expected result: ${EXPECTED} got ${RESULT}" && ERROR=1; fi
 
 echo "test on table with same pkey/ref name"
