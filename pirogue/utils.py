@@ -154,6 +154,7 @@ def insert_command(
     remove_pkey: bool = True,
     pkey: str = None,
     coalesce_pkey_default: bool = False,
+    coalesce_pkey_default_value: str = None,
     skip_columns: list = [],
     comment_skipped: bool = True,
     remap_columns: dict = {},
@@ -186,6 +187,8 @@ def insert_command(
          can be manually specified.
     coalesce_pkey_default
          if True, the following expression is used to insert the primary key: COALESCE( NEW.{pkey}, {default_value} )
+    coalesce_pkey_default_value
+         optionally give the default value for the primary key
     skip_columns
         list of columns to be skipped
     comment_skipped
@@ -259,7 +262,9 @@ def insert_command(
         )
         if coalesce_pkey_default and col == pkey:
             return "COALESCE( NEW.{cal}, {pk_def} )".format(
-                cal=cal, pk_def=default_value(pg_cur, table_schema, table_name, pkey)
+                cal=cal,
+                pk_def=coalesce_pkey_default_value
+                or default_value(pg_cur, table_schema, table_name, pkey),
             )
         elif col in inner_defaults:
             def_col = inner_defaults[col]

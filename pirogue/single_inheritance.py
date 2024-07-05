@@ -172,6 +172,9 @@ CREATE TRIGGER tr_{vn}_on_insert
                 self.parent_table,
                 remove_pkey=False,
                 coalesce_pkey_default=True,
+                coalesce_pkey_default_value=default_value(
+                    self.child_schema, self.child_table, self.child_pkey
+                ),
                 remap_columns={self.parent_pkey: self.ref_parent_key},
                 inner_defaults=self.inner_defaults,
                 returning="{ppk} INTO NEW.{prk}".format(
