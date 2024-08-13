@@ -444,7 +444,7 @@ def update_command(
     return """UPDATE {s}.{t}{a} SET
 {indent}    {cols}
 {indent}  WHERE {where_clause}
-{indent}  ){returning};""".format(
+{indent}  {returning};""".format(
         indent=indent * " ",
         s=table_schema,
         t=table_name,
