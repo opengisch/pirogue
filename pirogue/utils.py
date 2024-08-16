@@ -329,6 +329,7 @@ def update_command(
     columns_at_end: list = [],
     prefix: str = None,
     where_clause: str = None,
+    returning: str = None,
     indent: int = 2,
     inner_defaults: dict = {},
 ) -> str:
@@ -367,6 +368,8 @@ def update_command(
         add a prefix to the columns (do not applied to remapped columns)
     where_clause
          can be manually specified
+    returning
+        returning command
     indent
          add an indent in front
     inner_defaults
@@ -440,7 +443,8 @@ def update_command(
 
     return """UPDATE {s}.{t}{a} SET
 {indent}    {cols}
-{indent}  WHERE {where_clause};""".format(
+{indent}  WHERE {where_clause}
+{indent}  {returning};""".format(
         indent=indent * " ",
         s=table_schema,
         t=table_name,
@@ -469,6 +473,7 @@ def update_command(
                 ),
             ),
         ),
+        returning=f" RETURNING {returning}" if returning else "",
     )
 
 
