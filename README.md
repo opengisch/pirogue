@@ -1,3 +1,5 @@
+![logo](https://github.com/opengisch/pirogue/blob/master/pirogue.png?raw=true)
+
 # pirogue
 A tool to automatically create views and triggers on PostgreSQL databases
 
