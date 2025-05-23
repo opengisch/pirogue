@@ -9,7 +9,7 @@ on:
 
 env:
   PROJECT_FOLDER: "pirogue"
-  PYTHON_VERSION_RELEASE: "3.9"
+  PYTHON_VERSION_RELEASE: "3.10"
   PIROGUE_VERSION: ${{ github.ref_name }}
 
 jobs:
