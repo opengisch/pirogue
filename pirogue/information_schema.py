@@ -1,7 +1,4 @@
-try:
-    import psycopg
-except ImportError:
-    import psycopg2 as psycopg
+import psycopg
 
 from pirogue.exceptions import (
     InvalidSkipColumns,
