@@ -1,5 +1,3 @@
-import os
-
 try:
     import psycopg
 except ImportError:
@@ -19,7 +17,7 @@ class SingleInheritance:
         self,
         parent_table: str,
         child_table: str,
-        pg_service: str = None,
+        conn: psycopg.Connection,
         view_schema: str = None,
         view_name: str = None,
         pkey_default_value: bool = False,
@@ -30,8 +28,8 @@ class SingleInheritance:
 
         Parameters
         ----------
-        pg_service
-            if not given, it is determined using environment variable PGSERVICE
+        conn
+            a psycopg.Connection instance
         parent_table
             the parent table, can be schema specified
         child_table
@@ -46,9 +44,7 @@ class SingleInheritance:
             dictionary of other columns to default to in case the provided value is null or empty
         """
 
-        if pg_service is None:
-            pg_service = os.getenv("PGSERVICE")
-        self.conn = psycopg.connect(f"service={pg_service}")
+        self.conn = conn
         self.cursor = self.conn.cursor()
 
         self.pkey_default_value = pkey_default_value
@@ -82,10 +78,15 @@ class SingleInheritance:
 
         assert self.parent_pkey == parent_referenced_key
 
-    def create(self) -> bool:
+    def create(self, commit: bool = True) -> bool:
         """
         Creates the merge view on the specified service
         Returns True in case of success
+
+        Parameters
+        ----------
+        commit : bool
+            Whether to commit the transaction after executing the SQL statements.
         """
         success = True
         for sql in [
@@ -102,8 +103,8 @@ class SingleInheritance:
                 success = False
                 print(f"*** Failing:\n{sql}\n***")
                 raise e
-        self.conn.commit()
-        self.conn.close()
+        if commit:
+            self.conn.commit()
         return success
 
     def __view(self) -> str:
