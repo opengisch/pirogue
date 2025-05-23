@@ -43,14 +43,13 @@ class SimpleJoins:
                     raise InvalidDefinition(f'in join {alias} key "{key}" is not valid')
 
         self.conn = conn
-        self.cursor = self.conn.cursor()
 
         (self.parent_schema, self.parent_table) = table_parts(definition["table"])
         self.view_schema = definition.get("view_schema", self.parent_schema)
         self.view_name = definition.get("view_name", f"vw_{self.parent_table}")
 
         try:
-            self.parent_pkey = primary_key(self.cursor, self.parent_schema, self.parent_table)
+            self.parent_pkey = primary_key(self.conn, self.parent_schema, self.parent_table)
         except TableHasNoPrimaryKey:
             self.parent_pkey = definition["pkey"]
 
@@ -69,10 +68,10 @@ class SimpleJoins:
         for alias, table_def in definition["joins"].items():
             child = Table()
             (child.schema_name, child.table_name) = table_parts(table_def["table"])
-            child.pkey = primary_key(self.cursor, child.schema_name, child.table_name)
+            child.pkey = primary_key(self.conn, child.schema_name, child.table_name)
             try:
                 (child.parent_referenced_key, child.ref_parent_key) = reference_columns(
-                    self.cursor,
+                    self.conn,
                     self.parent_schema,
                     self.parent_table,
                     child.schema_name,
@@ -100,7 +99,8 @@ class SimpleJoins:
         sql = self.__view()
         success = True
         try:
-            self.cursor.execute(sql)
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
         except psycopg.Error as e:
             success = False
             print(f"*** Failing:\n{sql}\n***")
@@ -124,7 +124,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
             vs=self.view_schema,
             vn=self.view_name,
             parent_cols=select_columns(
-                self.cursor,
+                self.conn,
                 self.parent_schema,
                 self.parent_table,
                 table_alias=self.parent_table,
@@ -133,7 +133,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
             child_cols="\n  ".join(
                 [
                     select_columns(
-                        self.cursor,
+                        self.conn,
                         child_def.schema_name,
                         child_def.table_name,
                         table_alias=alias,
