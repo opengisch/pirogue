@@ -1,7 +1,7 @@
 try:
-    pass
+    import psycopg
 except ImportError:
-    pass
+    import psycopg2 as psycopg
 
 from pirogue.exceptions import InvalidColumn, TableHasNoPrimaryKey
 from pirogue.information_schema import columns, default_value, primary_key
@@ -23,7 +23,7 @@ def table_parts(name: str) -> tuple[str, str]:
 
 
 def select_columns(
-    conn,
+    conn: psycopg.Connection,
     table_schema: str,
     table_name: str,
     table_type: str = "table",

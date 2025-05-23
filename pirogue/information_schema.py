@@ -1,7 +1,7 @@
 try:
-    pass
+    import psycopg
 except ImportError:
-    pass
+    import psycopg2 as psycopg
 
 from pirogue.exceptions import (
     InvalidSkipColumns,
@@ -10,7 +10,7 @@ from pirogue.exceptions import (
 )
 
 
-def primary_key(conn, schema_name: str, table_name: str) -> str:
+def primary_key(conn: psycopg.Connection, schema_name: str, table_name: str) -> str:
     """
     Returns the primary of a table
 
@@ -110,7 +110,7 @@ def columns(
 
 
 def reference_columns(
-    conn,
+    conn: psycopg.Connection,
     table_schema: str,
     table_name: str,
     foreign_table_schema: str,
@@ -165,7 +165,9 @@ def reference_columns(
     return cols
 
 
-def default_value(conn, table_schema: str, table_name: str, column: str) -> str:
+def default_value(
+    conn: psycopg.Connection, table_schema: str, table_name: str, column: str
+) -> str:
     """
     Returns the default value of the column
 

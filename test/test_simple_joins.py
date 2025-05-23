@@ -20,7 +20,8 @@ class TestSimpleJoins(unittest.TestCase):
         self.conn = psycopg.connect(f"service={pg_service}")
 
         sql = open("test/demo_data.sql").read()
-        self.cur.execute(sql)
+        cur = self.conn.cursor()
+        cur.execute(sql)
         self.conn.commit()
 
     def tearDown(self):

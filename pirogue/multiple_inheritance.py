@@ -58,7 +58,6 @@ class MultipleInheritance:
         self.drop = drop
 
         self.conn = conn
-        self.cursor = self.conn.cursor()
 
         # check definition validity
         for key in definition.keys():
@@ -124,7 +123,7 @@ class MultipleInheritance:
         self.additional_columns = definition.get("additional_columns", {})
 
         try:
-            self.master_pkey = primary_key(self.cursor, self.master_schema, self.master_table)
+            self.master_pkey = primary_key(self.conn, self.master_schema, self.master_table)
         except TableHasNoPrimaryKey:
             raise TableHasNoPrimaryKey(
                 f'{self.view_alias} has no primary key, specify it with "key"'
@@ -141,7 +140,7 @@ class MultipleInheritance:
                 table_def["ref_master_key"] = table_def["fkey"]
             else:
                 table_def["ref_master_key"] = reference_columns(
-                    self.cursor,
+                    self.conn,
                     table_def["table_schema"],
                     table_def["table_name"],
                     self.master_schema,
@@ -149,7 +148,7 @@ class MultipleInheritance:
                 )[0]
             try:
                 table_def["pkey"] = primary_key(
-                    self.cursor, table_def["table_schema"], table_def["table_name"]
+                    self.conn, table_def["table_schema"], table_def["table_name"]
                 )
             except TableHasNoPrimaryKey:
                 table_def["pkey"] = table_def["ref_master_key"]
@@ -161,7 +160,7 @@ class MultipleInheritance:
         for col in merge_geometry_columns:
             for table_def in self.joins.values():
                 gt = geometry_type(
-                    self.cursor, table_def["table_schema"], table_def["table_name"], col
+                    self.conn, table_def["table_schema"], table_def["table_name"], col
                 )
                 if gt:
                     self.merge_column_cast[col] = "::geometry({type},{srid})".format(
@@ -197,7 +196,8 @@ class MultipleInheritance:
             if not _sql:
                 continue
             try:
-                self.cursor.execute(psycopg.sql.SQL(_sql).format(**self.variables))
+                cursor = self.conn.cursor()
+                cursor.execute(psycopg.sql.SQL(_sql).format(**self.variables))
             except (TypeError, KeyError):
                 success = False
                 print(f"*** Failing:\n{_sql}\n***")
@@ -287,7 +287,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
             ),
             type_name=self.type_name,
             master_columns=select_columns(
-                self.cursor,
+                self.conn,
                 self.master_schema,
                 self.master_table,
                 table_alias=self.view_alias,
@@ -314,7 +314,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                 for alias, table_def in sorted_joins
                                 if col
                                 in columns(
-                                    self.cursor,
+                                    self.conn,
                                     table_def["table_schema"],
                                     table_def["table_name"],
                                     skip_columns=table_def.get("skip_columns", []),
@@ -329,7 +329,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
             joined_columns="\n    ".join(
                 [
                     select_columns(
-                        self.cursor,
+                        self.conn,
                         table_def["table_schema"],
                         table_def["table_name"],
                         table_alias=table_def["short_alias"],
@@ -409,7 +409,7 @@ CREATE TRIGGER tr_{vn}_on_insert
             ),
             insert_trigger_pre=self.insert_trigger.get("pre", ""),
             insert_master=insert_command(
-                self.cursor,
+                self.conn,
                 self.master_schema,
                 self.master_table,
                 skip_columns=self.master_skip_colums,
@@ -428,7 +428,7 @@ CREATE TRIGGER tr_{vn}_on_insert
                         alias=alias,
                         vs=self.view_schema,
                         insert_join=insert_command(
-                            self.cursor,
+                            self.conn,
                             table_def["table_schema"],
                             table_def["table_name"],
                             table_alias=table_def["short_alias"],
@@ -500,7 +500,7 @@ CREATE TRIGGER tr_{vn}_on_update
             ),
             update_trigger_pre=self.update_trigger.get("pre", ""),
             update_master=update_command(
-                self.cursor,
+                self.conn,
                 self.master_schema,
                 self.master_table,
                 skip_columns=self.master_skip_colums,
@@ -565,7 +565,7 @@ CREATE TRIGGER tr_{vn}_on_update
                         alias=alias,
                         vs=self.view_schema,
                         update_join=update_command(
-                            self.cursor,
+                            self.conn,
                             table_def["table_schema"],
                             table_def["table_name"],
                             table_alias=table_def["short_alias"],
@@ -648,7 +648,7 @@ CREATE TRIGGER tr_{vn}_on_delete
                 vn=self.view_name,
                 master_pkey=self.master_pkey,
                 dv=default_value(
-                    self.cursor, self.master_schema, self.master_table, self.master_pkey
+                    self.conn, self.master_schema, self.master_table, self.master_pkey
                 ),
             )
         return sql
