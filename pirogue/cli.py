@@ -3,11 +3,7 @@
 import argparse
 import os
 
-try:
-    import psycopg
-except ImportError:
-    import psycopg2 as psycopg
-
+import psycopg
 import yaml
 
 from pirogue.multiple_inheritance import MultipleInheritance

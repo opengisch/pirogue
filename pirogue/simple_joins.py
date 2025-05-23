@@ -1,7 +1,4 @@
-try:
-    import psycopg
-except ImportError:
-    import psycopg2 as psycopg
+import psycopg
 
 from pirogue.exceptions import InvalidDefinition, NoReferenceFound, TableHasNoPrimaryKey
 from pirogue.information_schema import primary_key, reference_columns
