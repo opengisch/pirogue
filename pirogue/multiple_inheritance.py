@@ -1,5 +1,3 @@
-import os
-
 try:
     import psycopg
 except ImportError:
@@ -33,7 +31,7 @@ class MultipleInheritance:
     def __init__(
         self,
         definition: dict,
-        pg_service: str = None,
+        conn: psycopg.Connection,
         variables: dict = {},
         create_joins: bool = False,
         drop: bool = False,
@@ -45,8 +43,8 @@ class MultipleInheritance:
         ----------
         definition
             the YAML definition of the multiple inheritance
-        pg_service
-            if not given, it is determined using environment variable PGSERVICE
+        conn
+            a psycopg.Connection instance
         variables
             dictionary for variables to be used in SQL deltas ( name => value )
         create_joins
@@ -59,10 +57,7 @@ class MultipleInheritance:
         self.create_joins = create_joins
         self.drop = drop
 
-        self.pg_service = pg_service
-        if self.pg_service is None:
-            self.pg_service = os.getenv("PGSERVICE")
-        self.conn = psycopg.connect(f"service={self.pg_service}")
+        self.conn = conn
         self.cursor = self.conn.cursor()
 
         # check definition validity
@@ -177,10 +172,15 @@ class MultipleInheritance:
                 raise InvalidDefinition(f'There is no geometry column "{col}" in joined tables')
         self.merge_columns = definition.get("merge_columns", []) + merge_geometry_columns
 
-    def create(self) -> bool:
+    def create(self, commit: bool = True) -> bool:
         """
         Creates the merge view on the specified service
         Returns True in case of success
+
+        Parameters
+        ----------
+        commit : bool
+            If True, commits the transaction after executing queries.
         """
         queries = []
         success = True
@@ -212,20 +212,20 @@ class MultipleInheritance:
             except psycopg.Error as e:
                 print(f"*** Failing:\n{_sql}\n***")
                 raise e
-        self.conn.commit()
-        self.conn.close()
+        if commit:
+            self.conn.commit()
 
         if self.create_joins:
             for alias, table_def in self.joins.items():
                 success &= SingleInheritance(
-                    pg_service=self.pg_service,
+                    conn=self.conn,
                     parent_table=f"{self.master_schema}.{self.master_table}",
                     child_table="{s}.{t}".format(
                         s=table_def["table_schema"], t=table_def["table_name"]
                     ),
                     view_name=f"vw_{alias}",
                     view_schema=self.view_schema,
-                ).create()
+                ).create(commit=commit)
         return success
 
     def __drops(self) -> str:

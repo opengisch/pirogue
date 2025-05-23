@@ -1,7 +1,7 @@
 try:
-    from psycopg import Cursor
+    pass
 except ImportError:
-    from psycopg2.extensions import cursor as Cursor
+    pass
 
 from pirogue.exceptions import (
     InvalidSkipColumns,
@@ -10,14 +10,14 @@ from pirogue.exceptions import (
 )
 
 
-def primary_key(pg_cur: Cursor, schema_name: str, table_name: str) -> str:
+def primary_key(conn, schema_name: str, table_name: str) -> str:
     """
     Returns the primary of a table
 
     Parameters
     ----------
-    pg_cur
-        psycopg cursor
+    conn
+        psycopg connection
     schema_name
         the schema name
     table_name
@@ -32,16 +32,17 @@ def primary_key(pg_cur: Cursor, schema_name: str, table_name: str) -> str:
         " AND t.table_schema = '{s}'"
         " AND t.constraint_type = 'PRIMARY KEY'".format(s=schema_name, t=table_name)
     )
-    pg_cur.execute(sql)
-    try:
-        pkey = pg_cur.fetchone()[0]
-    except Exception:
-        raise TableHasNoPrimaryKey(sql)
+    with conn.cursor() as pg_cur:
+        pg_cur.execute(sql)
+        try:
+            pkey = pg_cur.fetchone()[0]
+        except Exception:
+            raise TableHasNoPrimaryKey(sql)
     return pkey
 
 
 def columns(
-    pg_cur: Cursor,
+    conn,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
@@ -53,8 +54,8 @@ def columns(
 
     Parameters
     ----------
-    pg_cur
-        psycopg cursor
+    conn
+        psycopg connection
     table_schema
         the table_schema
     table_name
@@ -89,39 +90,39 @@ def columns(
                 ORDER BY ordinal_position""".format(
             s=table_schema, t=table_name
         )
-
-    pg_cur.execute(sql)
-    pg_fields = pg_cur.fetchall()
-    pg_fields = [field[0] for field in pg_fields if field[0]]
-    for col in skip_columns:
-        try:
-            pg_fields.remove(col)
-        except ValueError:
-            raise InvalidSkipColumns(
-                'Cannot skip unexisting column "{col}" in "{s}.{t}"'.format(
-                    col=col, s=table_schema, t=table_name
+    with conn.cursor() as pg_cur:
+        pg_cur.execute(sql)
+        pg_fields = pg_cur.fetchall()
+        pg_fields = [field[0] for field in pg_fields if field[0]]
+        for col in skip_columns:
+            try:
+                pg_fields.remove(col)
+            except ValueError:
+                raise InvalidSkipColumns(
+                    'Cannot skip unexisting column "{col}" in "{s}.{t}"'.format(
+                        col=col, s=table_schema, t=table_name
+                    )
                 )
-            )
-    if remove_pkey:
-        pkey = primary_key(pg_cur, table_schema, table_name)
-        pg_fields.remove(pkey)
+        if remove_pkey:
+            pkey = primary_key(conn, table_schema, table_name)
+            pg_fields.remove(pkey)
     return pg_fields
 
 
 def reference_columns(
-    pg_cur: Cursor,
+    conn,
     table_schema: str,
     table_name: str,
     foreign_table_schema: str,
     foreign_table_name: str,
-) -> (str, str):
+) -> tuple[str, str]:
     """
     Returns the columns use in a reference constraint
 
     Parameters
     ----------
-    pg_cur
-        the psycopg cursor
+    conn
+        psycopg connection
     table_schema
         the table schema
     table_name
@@ -149,25 +150,29 @@ def reference_columns(
             tn=table_name, ts=table_schema, ftn=foreign_table_name, fts=foreign_table_schema
         )
     )
-    pg_cur.execute(sql)
-    cols = pg_cur.fetchone()
-    if not cols:
-        raise NoReferenceFound(
-            "{ts}.{tn} has no reference to {fts}.{ftn}".format(
-                tn=table_name, ts=table_schema, ftn=foreign_table_name, fts=foreign_table_schema
+    with conn.cursor() as pg_cur:
+        pg_cur.execute(sql)
+        cols = pg_cur.fetchone()
+        if not cols:
+            raise NoReferenceFound(
+                "{ts}.{tn} has no reference to {fts}.{ftn}".format(
+                    tn=table_name,
+                    ts=table_schema,
+                    ftn=foreign_table_name,
+                    fts=foreign_table_schema,
+                )
             )
-        )
     return cols
 
 
-def default_value(pg_cur: Cursor, table_schema: str, table_name: str, column: str) -> str:
+def default_value(conn, table_schema: str, table_name: str, column: str) -> str:
     """
     Returns the default value of the column
 
     Parameters
     ----------
-    pg_cur
-        the psycopg cursor
+    conn
+        psycopg connection
     table_schema
         the table schema
     table_name
@@ -186,20 +191,22 @@ def default_value(pg_cur: Cursor, table_schema: str, table_name: str, column: st
         "AND    a.attrelid = '{ts}.{tn}'::regclass\n"
         "AND    a.attname = '{col}';".format(ts=table_schema, tn=table_name, col=column)
     )
-    pg_cur.execute(sql)
-    return pg_cur.fetchone()[0] or "NULL"
+    with conn.cursor() as pg_cur:
+        pg_cur.execute(sql)
+        result = pg_cur.fetchone()
+        return result[0] if result and result[0] is not None else "NULL"
 
 
 def geometry_type(
-    pg_cur: Cursor, table_schema: str, table_name: str, column: str = "geometry"
-) -> (str, int):
+    conn, table_schema: str, table_name: str, column: str = "geometry"
+) -> tuple[str, int] | None:
     """
     Returns the geometry type of a column as a tuple (type, srid)
 
     Parameters
     ----------
-    pg_cur
-        the psycopg cursor
+    conn
+        psycopg connection
     table_schema
         the table schema
     table_name
@@ -214,9 +221,10 @@ def geometry_type(
         "AND f_table_name = '{t}' "
         "AND f_geometry_column = '{c}';".format(s=table_schema, t=table_name, c=column)
     )
-    pg_cur.execute(sql)
-    res = pg_cur.fetchone()
-    if res:
-        return res[0], res[1]
-    else:
-        return None
+    with conn.cursor() as pg_cur:
+        pg_cur.execute(sql)
+        res = pg_cur.fetchone()
+        if res:
+            return res[0], res[1]
+        else:
+            return None

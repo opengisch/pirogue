@@ -1,5 +1,3 @@
-import os
-
 try:
     import psycopg
 except ImportError:
@@ -15,7 +13,7 @@ class SimpleJoins:
     Creates a view made of simple joins, without any edit triggers.
     """
 
-    def __init__(self, definition: dict, pg_service: str = None):
+    def __init__(self, definition: dict, conn: psycopg.Connection):
         """
         Produces the SQL code of the join table and triggers
 
@@ -23,8 +21,8 @@ class SimpleJoins:
         ----------
         definition
             the YAML definition of the multiple inheritance
-        pg_service
-            if not given, it is determined using environment variable PGSERVICE
+        conn
+            a psycopg.Connection instance
         """
 
         # check definition validity
@@ -44,9 +42,7 @@ class SimpleJoins:
                 ):
                     raise InvalidDefinition(f'in join {alias} key "{key}" is not valid')
 
-        if pg_service is None:
-            pg_service = os.getenv("PGSERVICE")
-        self.conn = psycopg.connect(f"service={pg_service}")
+        self.conn = conn
         self.cursor = self.conn.cursor()
 
         (self.parent_schema, self.parent_table) = table_parts(definition["table"])
@@ -91,10 +87,15 @@ class SimpleJoins:
             child.prefix = table_def.get("prefix", None)
             self.child_tables[alias] = child
 
-    def create(self) -> bool:
+    def create(self, commit: bool = True) -> bool:
         """
         Creates the merge view on the specified service
         Returns True in case of success
+
+        Parameters
+        ----------
+        commit : bool
+            If True, commits the transaction after executing the SQL.
         """
         sql = self.__view()
         success = True
@@ -104,8 +105,8 @@ class SimpleJoins:
             success = False
             print(f"*** Failing:\n{sql}\n***")
             raise e
-        self.conn.commit()
-        self.conn.close()
+        if commit:
+            self.conn.commit()
         return success
 
     def __view(self) -> str:
