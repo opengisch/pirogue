@@ -478,8 +478,8 @@ def update_command(
 
 
 def __column_alias(
-    *,
     column: str,
+    *,
     remap_columns: dict = {},
     prefix: str = None,
     field_if_no_alias: bool = False,
