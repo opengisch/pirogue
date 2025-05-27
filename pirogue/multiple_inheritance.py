@@ -24,9 +24,9 @@ class MultipleInheritance:
 
     def __init__(
         self,
-        definition: dict,
-        conn: psycopg.Connection,
         *,
+        definition: dict,
+        connection: psycopg.Connection,
         variables: dict = {},
         create_joins: bool = False,
         drop: bool = False,
@@ -38,7 +38,7 @@ class MultipleInheritance:
         ----------
         definition
             the YAML definition of the multiple inheritance
-        conn
+        connection
             a psycopg.Connection instance
         variables
             dictionary for variables to be used in SQL deltas ( name => value )
@@ -52,7 +52,7 @@ class MultipleInheritance:
         self.create_joins = create_joins
         self.drop = drop
 
-        self.conn = conn
+        self.conn = connection
 
         # check definition validity
         for key in definition.keys():
