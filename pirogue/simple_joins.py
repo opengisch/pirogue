@@ -10,7 +10,7 @@ class SimpleJoins:
     Creates a view made of simple joins, without any edit triggers.
     """
 
-    def __init__(self, definition: dict, conn: psycopg.Connection):
+    def __init__(self, definition: dict, connection: psycopg.Connection):
         """
         Produces the SQL code of the join table and triggers
 
@@ -18,7 +18,7 @@ class SimpleJoins:
         ----------
         definition
             the YAML definition of the multiple inheritance
-        conn
+        connection
             a psycopg.Connection instance
         """
 
@@ -39,7 +39,7 @@ class SimpleJoins:
                 ):
                     raise InvalidDefinition(f'in join {alias} key "{key}" is not valid')
 
-        self.conn = conn
+        self.conn = connection
 
         (self.parent_schema, self.parent_table) = table_parts(definition["table"])
         self.view_schema = definition.get("view_schema", self.parent_schema)
@@ -121,18 +121,18 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
             vs=self.view_schema,
             vn=self.view_name,
             parent_cols=select_columns(
-                self.conn,
-                self.parent_schema,
-                self.parent_table,
+                connection=self.conn,
+                table_schema=self.parent_schema,
+                table_name=self.parent_table,
                 table_alias=self.parent_table,
                 remove_pkey=False,
             ),
             child_cols="\n  ".join(
                 [
                     select_columns(
-                        self.conn,
-                        child_def.schema_name,
-                        child_def.table_name,
+                        connection=self.conn,
+                        table_schema=child_def.schema_name,
+                        table_name=child_def.table_name,
                         table_alias=alias,
                         remap_columns=child_def.remap_columns,
                         prefix=child_def.prefix,
