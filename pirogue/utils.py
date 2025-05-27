@@ -20,7 +20,8 @@ def table_parts(name: str) -> tuple[str, str]:
 
 
 def select_columns(
-    conn: psycopg.Connection,
+    *,
+    connection: psycopg.Connection,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
@@ -42,7 +43,7 @@ def select_columns(
 
     Parameters
     ----------
-    conn
+    connection
         the psycopg connection
     table_schema
         the schema
@@ -77,13 +78,13 @@ def select_columns(
         separate the first column with a comma
     """
     try:
-        pk_for_sort = primary_key(conn, table_schema, table_name)
+        pk_for_sort = primary_key(connection, table_schema, table_name)
     except TableHasNoPrimaryKey:
         pk_for_sort = None
     cols = sorted(
         columns_list
         or columns(
-            conn,
+            connection,
             table_schema=table_schema,
             table_name=table_name,
             table_type=table_type,
@@ -143,7 +144,8 @@ def select_columns(
 
 
 def insert_command(
-    conn,
+    *,
+    connection: psycopg.Connection,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
@@ -168,7 +170,7 @@ def insert_command(
 
     Parameters
     ----------
-    conn
+    connection
         the psycopg connection
     table_schema
         the schema
@@ -211,12 +213,12 @@ def insert_command(
 
     # get columns
     try:
-        pk_for_sort = primary_key(conn, table_schema, table_name)
+        pk_for_sort = primary_key(connection, table_schema, table_name)
     except TableHasNoPrimaryKey:
         pk_for_sort = None
     cols = sorted(
         columns(
-            conn,
+            connection,
             table_schema=table_schema,
             table_name=table_name,
             table_type=table_type,
@@ -233,7 +235,7 @@ def insert_command(
         return f"-- Do not insert for {table_name} since all columns are skipped"
 
     if not pkey and coalesce_pkey_default:
-        pkey = primary_key(conn, table_schema, table_name)
+        pkey = primary_key(connection, table_schema, table_name)
 
     # check arguments
     for param, dict_or_list in {
@@ -261,7 +263,7 @@ def insert_command(
             return "COALESCE( NEW.{cal}, {pk_def} )".format(
                 cal=cal,
                 pk_def=coalesce_pkey_default_value
-                or default_value(conn, table_schema, table_name, pkey),
+                or default_value(connection, table_schema, table_name, pkey),
             )
         elif col in inner_defaults:
             def_col = inner_defaults[col]
@@ -311,7 +313,8 @@ def insert_command(
 
 
 def update_command(
-    conn,
+    *,
+    connection: psycopg.Connection,
     table_schema: str,
     table_name: str,
     table_alias: str = None,
@@ -335,7 +338,7 @@ def update_command(
 
     Parameters
     ----------
-    conn
+    connection
          the psycopg connection
     table_schema
          the schema
@@ -380,12 +383,12 @@ def update_command(
     remove_pkey = remove_pkey and pkey is None and where_clause is None
     # get columns
     try:
-        pk_for_sort = primary_key(conn, table_schema, table_name)
+        pk_for_sort = primary_key(connection, table_schema, table_name)
     except TableHasNoPrimaryKey:
         pk_for_sort = None
     cols = sorted(
         columns(
-            conn,
+            connection,
             table_schema=table_schema,
             table_name=table_name,
             table_type=table_type,
@@ -402,7 +405,7 @@ def update_command(
         return f"-- Do not update for {table_name} since all columns are skipped"
 
     if not pkey and not where_clause:
-        pkey = primary_key(conn, table_schema, table_name)
+        pkey = primary_key(connection, table_schema, table_name)
 
     # check arguments
     for param, dict_or_list in {
@@ -475,6 +478,7 @@ def update_command(
 
 
 def __column_alias(
+    *,
     column: str,
     remap_columns: dict = {},
     prefix: str = None,
@@ -502,7 +506,11 @@ def __column_alias(
 
 
 def __column_priority(
-    column: str, columns_on_top: list = [], columns_at_end: list = [], primary_key: str = None
+    column: str,
+    *,
+    columns_on_top: list = [],
+    columns_at_end: list = [],
+    primary_key: str = None,
 ):
     """
     Returns a value to sort columns first the primary key, then by priority (on top / at end), then alphabetically

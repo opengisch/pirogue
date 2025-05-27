@@ -13,9 +13,9 @@ class SingleInheritance:
     def __init__(
         self,
         *,
+        connection: psycopg.Connection,
         parent_table: str,
         child_table: str,
-        conn: psycopg.Connection,
         view_schema: str = None,
         view_name: str = None,
         pkey_default_value: bool = False,
@@ -26,7 +26,7 @@ class SingleInheritance:
 
         Parameters
         ----------
-        conn
+        connection
             a psycopg.Connection instance
         parent_table
             the parent table, can be schema specified
@@ -42,7 +42,7 @@ class SingleInheritance:
             dictionary of other columns to default to in case the provided value is null or empty
         """
 
-        self.conn = conn
+        self.conn = connection
 
         self.pkey_default_value = pkey_default_value
         self.inner_defaults = inner_defaults
@@ -120,9 +120,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
             vs=self.view_schema,
             vn=self.view_name,
             parent_cols=select_columns(
-                self.conn,
-                self.parent_schema,
-                self.parent_table,
+                connection=self.conn,
+                table_schema=self.parent_schema,
+                table_name=self.parent_table,
                 table_alias=self.parent_table,
                 remove_pkey=True,
             ),
