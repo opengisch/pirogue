@@ -282,9 +282,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
             ),
             type_name=self.type_name,
             master_columns=select_columns(
-                self.conn,
-                self.master_schema,
-                self.master_table,
+                connection=self.conn,
+                table_schema=self.master_schema,
+                table_name=self.master_table,
                 table_alias=self.view_alias,
                 skip_columns=self.master_skip_colums,
                 prefix=self.master_prefix,
@@ -309,9 +309,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                 for alias, table_def in sorted_joins
                                 if col
                                 in columns(
-                                    self.conn,
-                                    table_def["table_schema"],
-                                    table_def["table_name"],
+                                    conn=self.conn,
+                                    table_schema=table_def["table_schema"],
+                                    table_name=table_def["table_name"],
                                     skip_columns=table_def.get("skip_columns", []),
                                 )
                             ]
@@ -324,9 +324,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
             joined_columns="\n    ".join(
                 [
                     select_columns(
-                        self.conn,
-                        table_def["table_schema"],
-                        table_def["table_name"],
+                        connection=self.conn,
+                        table_schema=table_def["table_schema"],
+                        table_name=table_def["table_name"],
                         table_alias=table_def["short_alias"],
                         skip_columns=table_def.get("skip_columns", [])
                         + [table_def["ref_master_key"]],
@@ -404,9 +404,9 @@ CREATE TRIGGER tr_{vn}_on_insert
             ),
             insert_trigger_pre=self.insert_trigger.get("pre", ""),
             insert_master=insert_command(
-                self.conn,
-                self.master_schema,
-                self.master_table,
+                connection=self.conn,
+                table_schema=self.master_schema,
+                table_name=self.master_table,
                 skip_columns=self.master_skip_colums,
                 prefix=self.master_prefix,
                 remap_columns=self.master_remap_columns,
@@ -423,9 +423,9 @@ CREATE TRIGGER tr_{vn}_on_insert
                         alias=alias,
                         vs=self.view_schema,
                         insert_join=insert_command(
-                            self.conn,
-                            table_def["table_schema"],
-                            table_def["table_name"],
+                            connection=self.conn,
+                            table_schema=table_def["table_schema"],
+                            table_name=table_def["table_name"],
                             table_alias=table_def["short_alias"],
                             skip_columns=table_def.get("skip_columns", []),
                             prefix=table_def.get("prefix", None),
@@ -495,9 +495,9 @@ CREATE TRIGGER tr_{vn}_on_update
             ),
             update_trigger_pre=self.update_trigger.get("pre", ""),
             update_master=update_command(
-                self.conn,
-                self.master_schema,
-                self.master_table,
+                connection=self.conn,
+                table_schema=self.master_schema,
+                table_name=self.master_table,
                 skip_columns=self.master_skip_colums,
                 prefix=self.master_prefix,
                 remap_columns=self.master_remap_columns,
@@ -560,9 +560,9 @@ CREATE TRIGGER tr_{vn}_on_update
                         alias=alias,
                         vs=self.view_schema,
                         update_join=update_command(
-                            self.conn,
-                            table_def["table_schema"],
-                            table_def["table_name"],
+                            connection=self.conn,
+                            table_schema=table_def["table_schema"],
+                            table_name=table_def["table_name"],
                             table_alias=table_def["short_alias"],
                             pkey=table_def["pkey"],
                             skip_columns=table_def.get("skip_columns", []),
