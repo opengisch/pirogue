@@ -12,6 +12,7 @@ class SingleInheritance:
 
     def __init__(
         self,
+        *,
         parent_table: str,
         child_table: str,
         conn: psycopg.Connection,

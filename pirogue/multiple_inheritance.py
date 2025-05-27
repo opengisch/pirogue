@@ -26,6 +26,7 @@ class MultipleInheritance:
         self,
         definition: dict,
         conn: psycopg.Connection,
+        *,
         variables: dict = {},
         create_joins: bool = False,
         drop: bool = False,
