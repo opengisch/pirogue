@@ -126,21 +126,21 @@ def select_columns(
         else:
             return ""
 
-    return "\n{indent}".format(indent=indent * " ").join(
-        [
-            "{skip}{comma}{table_alias}.{column}{col_alias}".format(
-                comma=print_comma(first_column_printed, col not in skip_columns),
-                skip="-- " if col in skip_columns else "",
-                table_alias=table_alias or table_name,
-                column=col,
-                col_alias=__column_alias(
-                    col, remap_columns=remap_columns, prefix=prefix, prepend_as=True
-                ),
+    lines = []
+    for col in cols:
+        if comment_skipped or col not in skip_columns:
+            lines.append(
+                "{skip}{comma}{table_alias}.{column}{col_alias}".format(
+                    comma=print_comma(first_column_printed, col not in skip_columns),
+                    skip="-- " if col in skip_columns else "",
+                    table_alias=table_alias or table_name,
+                    column=col,
+                    col_alias=__column_alias(
+                        col, remap_columns=remap_columns, prefix=prefix, prepend_as=True
+                    ),
+                )
             )
-            for col in cols
-            if (comment_skipped or col not in skip_columns)
-        ]
-    )
+    return "\n{indent}".format(indent=indent * " ").join(lines)
 
 
 def insert_command(
