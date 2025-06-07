@@ -1,9 +1,4 @@
-import os
-
-try:
-    import psycopg
-except ImportError:
-    import psycopg2 as psycopg
+import psycopg
 
 from pirogue.exceptions import TableHasNoPrimaryKey
 from pirogue.information_schema import default_value, primary_key, reference_columns
@@ -17,9 +12,10 @@ class SingleInheritance:
 
     def __init__(
         self,
+        *,
+        connection: psycopg.Connection,
         parent_table: str,
         child_table: str,
-        pg_service: str = None,
         view_schema: str = None,
         view_name: str = None,
         pkey_default_value: bool = False,
@@ -30,8 +26,8 @@ class SingleInheritance:
 
         Parameters
         ----------
-        pg_service
-            if not given, it is determined using environment variable PGSERVICE
+        connection
+            a psycopg.Connection instance
         parent_table
             the parent table, can be schema specified
         child_table
@@ -46,10 +42,7 @@ class SingleInheritance:
             dictionary of other columns to default to in case the provided value is null or empty
         """
 
-        if pg_service is None:
-            pg_service = os.getenv("PGSERVICE")
-        self.conn = psycopg.connect(f"service={pg_service}")
-        self.cursor = self.conn.cursor()
+        self.conn = connection
 
         self.pkey_default_value = pkey_default_value
         self.inner_defaults = inner_defaults
@@ -72,20 +65,29 @@ class SingleInheritance:
         )
 
         (self.ref_parent_key, parent_referenced_key) = reference_columns(
-            self.cursor, self.child_schema, self.child_table, self.parent_schema, self.parent_table
+            self.conn,
+            self.child_schema,
+            self.child_table,
+            foreign_table_schema=self.parent_schema,
+            foreign_table_name=self.parent_table,
         )
         try:
-            self.child_pkey = primary_key(self.cursor, self.child_schema, self.child_table)
+            self.child_pkey = primary_key(self.conn, self.child_schema, self.child_table)
         except TableHasNoPrimaryKey:
             self.child_pkey = self.ref_parent_key
-        self.parent_pkey = primary_key(self.cursor, self.parent_schema, self.parent_table)
+        self.parent_pkey = primary_key(self.conn, self.parent_schema, self.parent_table)
 
         assert self.parent_pkey == parent_referenced_key
 
-    def create(self) -> bool:
+    def create(self, commit: bool = True) -> bool:
         """
         Creates the merge view on the specified service
         Returns True in case of success
+
+        Parameters
+        ----------
+        commit : bool
+            Whether to commit the transaction after executing the SQL statements.
         """
         success = True
         for sql in [
@@ -97,13 +99,14 @@ class SingleInheritance:
         ]:
             try:
                 if sql:
-                    self.cursor.execute(sql)
+                    cursor = self.conn.cursor()
+                    cursor.execute(sql)
             except psycopg.Error as e:
                 success = False
                 print(f"*** Failing:\n{sql}\n***")
                 raise e
-        self.conn.commit()
-        self.conn.close()
+        if commit:
+            self.conn.commit()
         return success
 
     def __view(self) -> str:
@@ -121,14 +124,17 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
             vs=self.view_schema,
             vn=self.view_name,
             parent_cols=select_columns(
-                self.cursor,
-                self.parent_schema,
-                self.parent_table,
+                connection=self.conn,
+                table_schema=self.parent_schema,
+                table_name=self.parent_table,
                 table_alias=self.parent_table,
                 remove_pkey=True,
             ),
             child_cols=select_columns(
-                self.cursor, self.child_schema, self.child_table, table_alias=self.child_table
+                connection=self.conn,
+                table_schema=self.child_schema,
+                table_name=self.child_table,
+                table_alias=self.child_table,
             ),
             cs=self.child_schema,
             ct=self.child_table,
@@ -167,13 +173,13 @@ CREATE TRIGGER tr_{vn}_on_insert
             vs=self.view_schema,
             vn=self.view_name,
             insert_parent=insert_command(
-                self.cursor,
-                self.parent_schema,
-                self.parent_table,
+                connection=self.conn,
+                table_schema=self.parent_schema,
+                table_name=self.parent_table,
                 remove_pkey=False,
                 coalesce_pkey_default=True,
                 coalesce_pkey_default_value=default_value(
-                    self.cursor, self.child_schema, self.child_table, self.child_pkey
+                    self.conn, self.child_schema, self.child_table, self.child_pkey
                 ),
                 remap_columns={self.parent_pkey: self.ref_parent_key},
                 inner_defaults=self.inner_defaults,
@@ -182,9 +188,9 @@ CREATE TRIGGER tr_{vn}_on_insert
                 ),
             ),
             insert_child=insert_command(
-                self.cursor,
-                self.child_schema,
-                self.child_table,
+                connection=self.conn,
+                table_schema=self.child_schema,
+                table_name=self.child_table,
                 remove_pkey=False,
                 pkey=self.child_pkey,
             ),
@@ -214,15 +220,15 @@ CREATE TRIGGER tr_{vn}_on_update
             vs=self.view_schema,
             vn=self.view_name,
             update_master=update_command(
-                self.cursor,
-                self.parent_schema,
-                self.parent_table,
+                connection=self.conn,
+                table_schema=self.parent_schema,
+                table_name=self.parent_table,
                 remap_columns={self.parent_pkey: self.ref_parent_key},
             ),
             update_child=update_command(
-                self.cursor,
-                self.child_schema,
-                self.child_table,
+                connection=self.conn,
+                table_schema=self.child_schema,
+                table_name=self.child_table,
                 pkey=self.child_pkey,
                 remove_pkey=False,
             ),
@@ -265,8 +271,6 @@ CREATE TRIGGER tr_{vn}_on_delete
                 vs=self.view_schema,
                 vn=self.view_name,
                 rpk=self.child_pkey,
-                dv=default_value(
-                    self.cursor, self.child_schema, self.child_table, self.child_pkey
-                ),
+                dv=default_value(self.conn, self.child_schema, self.child_table, self.child_pkey),
             )
         return sql

@@ -1,13 +1,10 @@
-try:
-    from psycopg import Cursor
-except ImportError:
-    from psycopg2.extensions import cursor as Cursor
+import psycopg
 
 from pirogue.exceptions import InvalidColumn, TableHasNoPrimaryKey
 from pirogue.information_schema import columns, default_value, primary_key
 
 
-def table_parts(name: str) -> (str, str):
+def table_parts(name: str) -> tuple[str, str]:
     """
     Returns a tuple with schema and table names
 
@@ -23,7 +20,8 @@ def table_parts(name: str) -> (str, str):
 
 
 def select_columns(
-    pg_cur: Cursor,
+    *,
+    connection: psycopg.Connection,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
@@ -45,8 +43,8 @@ def select_columns(
 
     Parameters
     ----------
-    pg_cur
-        the psycopg cursor
+    connection
+        the psycopg connection
     table_schema
         the schema
     table_name
@@ -80,13 +78,13 @@ def select_columns(
         separate the first column with a comma
     """
     try:
-        pk_for_sort = primary_key(pg_cur, table_schema, table_name)
+        pk_for_sort = primary_key(connection, table_schema, table_name)
     except TableHasNoPrimaryKey:
         pk_for_sort = None
     cols = sorted(
         columns_list
         or columns(
-            pg_cur,
+            connection,
             table_schema=table_schema,
             table_name=table_name,
             table_type=table_type,
@@ -128,25 +126,26 @@ def select_columns(
         else:
             return ""
 
-    return "\n{indent}".format(indent=indent * " ").join(
-        [
-            "{skip}{comma}{table_alias}.{column}{col_alias}".format(
-                comma=print_comma(first_column_printed, col not in skip_columns),
-                skip="-- " if col in skip_columns else "",
-                table_alias=table_alias or table_name,
-                column=col,
-                col_alias=__column_alias(
-                    col, remap_columns=remap_columns, prefix=prefix, prepend_as=True
-                ),
+    lines = []
+    for col in cols:
+        if comment_skipped or col not in skip_columns:
+            lines.append(
+                "{skip}{comma}{table_alias}.{column}{col_alias}".format(
+                    comma=print_comma(first_column_printed, col not in skip_columns),
+                    skip="-- " if col in skip_columns else "",
+                    table_alias=table_alias or table_name,
+                    column=col,
+                    col_alias=__column_alias(
+                        col, remap_columns=remap_columns, prefix=prefix, prepend_as=True
+                    ),
+                )
             )
-            for col in cols
-            if (comment_skipped or col not in skip_columns)
-        ]
-    )
+    return "\n{indent}".format(indent=indent * " ").join(lines)
 
 
 def insert_command(
-    pg_cur: Cursor,
+    *,
+    connection: psycopg.Connection,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
@@ -171,8 +170,8 @@ def insert_command(
 
     Parameters
     ----------
-    pg_cur
-        the psycopg cursor
+    connection
+        the psycopg connection
     table_schema
         the schema
     table_name
@@ -214,12 +213,12 @@ def insert_command(
 
     # get columns
     try:
-        pk_for_sort = primary_key(pg_cur, table_schema, table_name)
+        pk_for_sort = primary_key(connection, table_schema, table_name)
     except TableHasNoPrimaryKey:
         pk_for_sort = None
     cols = sorted(
         columns(
-            pg_cur,
+            connection,
             table_schema=table_schema,
             table_name=table_name,
             table_type=table_type,
@@ -236,7 +235,7 @@ def insert_command(
         return f"-- Do not insert for {table_name} since all columns are skipped"
 
     if not pkey and coalesce_pkey_default:
-        pkey = primary_key(pg_cur, table_schema, table_name)
+        pkey = primary_key(connection, table_schema, table_name)
 
     # check arguments
     for param, dict_or_list in {
@@ -264,7 +263,7 @@ def insert_command(
             return "COALESCE( NEW.{cal}, {pk_def} )".format(
                 cal=cal,
                 pk_def=coalesce_pkey_default_value
-                or default_value(pg_cur, table_schema, table_name, pkey),
+                or default_value(connection, table_schema, table_name, pkey),
             )
         elif col in inner_defaults:
             def_col = inner_defaults[col]
@@ -314,7 +313,8 @@ def insert_command(
 
 
 def update_command(
-    pg_cur: Cursor,
+    *,
+    connection: psycopg.Connection,
     table_schema: str,
     table_name: str,
     table_alias: str = None,
@@ -338,8 +338,8 @@ def update_command(
 
     Parameters
     ----------
-    pg_cur
-         the psycopg cursor
+    connection
+         the psycopg connection
     table_schema
          the schema
     table_name
@@ -383,12 +383,12 @@ def update_command(
     remove_pkey = remove_pkey and pkey is None and where_clause is None
     # get columns
     try:
-        pk_for_sort = primary_key(pg_cur, table_schema, table_name)
+        pk_for_sort = primary_key(connection, table_schema, table_name)
     except TableHasNoPrimaryKey:
         pk_for_sort = None
     cols = sorted(
         columns(
-            pg_cur,
+            connection,
             table_schema=table_schema,
             table_name=table_name,
             table_type=table_type,
@@ -405,7 +405,7 @@ def update_command(
         return f"-- Do not update for {table_name} since all columns are skipped"
 
     if not pkey and not where_clause:
-        pkey = primary_key(pg_cur, table_schema, table_name)
+        pkey = primary_key(connection, table_schema, table_name)
 
     # check arguments
     for param, dict_or_list in {
@@ -479,6 +479,7 @@ def update_command(
 
 def __column_alias(
     column: str,
+    *,
     remap_columns: dict = {},
     prefix: str = None,
     field_if_no_alias: bool = False,
@@ -505,7 +506,11 @@ def __column_alias(
 
 
 def __column_priority(
-    column: str, columns_on_top: list = [], columns_at_end: list = [], primary_key: str = None
+    column: str,
+    *,
+    columns_on_top: list = [],
+    columns_at_end: list = [],
+    primary_key: str = None,
 ):
     """
     Returns a value to sort columns first the primary key, then by priority (on top / at end), then alphabetically

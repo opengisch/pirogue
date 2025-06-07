@@ -1,9 +1,4 @@
-import os
-
-try:
-    import psycopg
-except ImportError:
-    import psycopg2 as psycopg
+import psycopg
 
 from pirogue.exceptions import InvalidDefinition, NoReferenceFound, TableHasNoPrimaryKey
 from pirogue.information_schema import primary_key, reference_columns
@@ -15,7 +10,7 @@ class SimpleJoins:
     Creates a view made of simple joins, without any edit triggers.
     """
 
-    def __init__(self, definition: dict, pg_service: str = None):
+    def __init__(self, definition: dict, connection: psycopg.Connection):
         """
         Produces the SQL code of the join table and triggers
 
@@ -23,8 +18,8 @@ class SimpleJoins:
         ----------
         definition
             the YAML definition of the multiple inheritance
-        pg_service
-            if not given, it is determined using environment variable PGSERVICE
+        connection
+            a psycopg.Connection instance
         """
 
         # check definition validity
@@ -44,17 +39,14 @@ class SimpleJoins:
                 ):
                     raise InvalidDefinition(f'in join {alias} key "{key}" is not valid')
 
-        if pg_service is None:
-            pg_service = os.getenv("PGSERVICE")
-        self.conn = psycopg.connect(f"service={pg_service}")
-        self.cursor = self.conn.cursor()
+        self.conn = connection
 
         (self.parent_schema, self.parent_table) = table_parts(definition["table"])
         self.view_schema = definition.get("view_schema", self.parent_schema)
         self.view_name = definition.get("view_name", f"vw_{self.parent_table}")
 
         try:
-            self.parent_pkey = primary_key(self.cursor, self.parent_schema, self.parent_table)
+            self.parent_pkey = primary_key(self.conn, self.parent_schema, self.parent_table)
         except TableHasNoPrimaryKey:
             self.parent_pkey = definition["pkey"]
 
@@ -73,14 +65,14 @@ class SimpleJoins:
         for alias, table_def in definition["joins"].items():
             child = Table()
             (child.schema_name, child.table_name) = table_parts(table_def["table"])
-            child.pkey = primary_key(self.cursor, child.schema_name, child.table_name)
+            child.pkey = primary_key(self.conn, child.schema_name, child.table_name)
             try:
                 (child.parent_referenced_key, child.ref_parent_key) = reference_columns(
-                    self.cursor,
+                    self.conn,
                     self.parent_schema,
                     self.parent_table,
-                    child.schema_name,
-                    child.table_name,
+                    foreign_table_schema=child.schema_name,
+                    foreign_table_name=child.table_name,
                 )
                 assert child.pkey == child.ref_parent_key
             except NoReferenceFound:
@@ -91,21 +83,27 @@ class SimpleJoins:
             child.prefix = table_def.get("prefix", None)
             self.child_tables[alias] = child
 
-    def create(self) -> bool:
+    def create(self, commit: bool = True) -> bool:
         """
         Creates the merge view on the specified service
         Returns True in case of success
+
+        Parameters
+        ----------
+        commit : bool
+            If True, commits the transaction after executing the SQL.
         """
         sql = self.__view()
         success = True
         try:
-            self.cursor.execute(sql)
+            cursor = self.conn.cursor()
+            cursor.execute(sql)
         except psycopg.Error as e:
             success = False
             print(f"*** Failing:\n{sql}\n***")
             raise e
-        self.conn.commit()
-        self.conn.close()
+        if commit:
+            self.conn.commit()
         return success
 
     def __view(self) -> str:
@@ -123,18 +121,18 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS SELECT
             vs=self.view_schema,
             vn=self.view_name,
             parent_cols=select_columns(
-                self.cursor,
-                self.parent_schema,
-                self.parent_table,
+                connection=self.conn,
+                table_schema=self.parent_schema,
+                table_name=self.parent_table,
                 table_alias=self.parent_table,
                 remove_pkey=False,
             ),
             child_cols="\n  ".join(
                 [
                     select_columns(
-                        self.cursor,
-                        child_def.schema_name,
-                        child_def.table_name,
+                        connection=self.conn,
+                        table_schema=child_def.schema_name,
+                        table_name=child_def.table_name,
                         table_alias=alias,
                         remap_columns=child_def.remap_columns,
                         prefix=child_def.prefix,

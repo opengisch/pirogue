@@ -1,12 +1,4 @@
-import os
-
-try:
-    import psycopg
-except ImportError:
-    import psycopg2 as psycopg
-    import psycopg2.sql as __sql
-
-    psycopg.sql = __sql
+import psycopg
 
 from pirogue.exceptions import InvalidDefinition, TableHasNoPrimaryKey, VariableError
 from pirogue.information_schema import (
@@ -32,8 +24,9 @@ class MultipleInheritance:
 
     def __init__(
         self,
+        *,
         definition: dict,
-        pg_service: str = None,
+        connection: psycopg.Connection,
         variables: dict = {},
         create_joins: bool = False,
         drop: bool = False,
@@ -45,8 +38,8 @@ class MultipleInheritance:
         ----------
         definition
             the YAML definition of the multiple inheritance
-        pg_service
-            if not given, it is determined using environment variable PGSERVICE
+        connection
+            a psycopg.Connection instance
         variables
             dictionary for variables to be used in SQL deltas ( name => value )
         create_joins
@@ -59,11 +52,7 @@ class MultipleInheritance:
         self.create_joins = create_joins
         self.drop = drop
 
-        self.pg_service = pg_service
-        if self.pg_service is None:
-            self.pg_service = os.getenv("PGSERVICE")
-        self.conn = psycopg.connect(f"service={self.pg_service}")
-        self.cursor = self.conn.cursor()
+        self.conn = connection
 
         # check definition validity
         for key in definition.keys():
@@ -129,7 +118,7 @@ class MultipleInheritance:
         self.additional_columns = definition.get("additional_columns", {})
 
         try:
-            self.master_pkey = primary_key(self.cursor, self.master_schema, self.master_table)
+            self.master_pkey = primary_key(self.conn, self.master_schema, self.master_table)
         except TableHasNoPrimaryKey:
             raise TableHasNoPrimaryKey(
                 f'{self.view_alias} has no primary key, specify it with "key"'
@@ -146,15 +135,15 @@ class MultipleInheritance:
                 table_def["ref_master_key"] = table_def["fkey"]
             else:
                 table_def["ref_master_key"] = reference_columns(
-                    self.cursor,
+                    self.conn,
                     table_def["table_schema"],
                     table_def["table_name"],
-                    self.master_schema,
-                    self.master_table,
+                    foreign_table_schema=self.master_schema,
+                    foreign_table_name=self.master_table,
                 )[0]
             try:
                 table_def["pkey"] = primary_key(
-                    self.cursor, table_def["table_schema"], table_def["table_name"]
+                    self.conn, table_def["table_schema"], table_def["table_name"]
                 )
             except TableHasNoPrimaryKey:
                 table_def["pkey"] = table_def["ref_master_key"]
@@ -166,7 +155,7 @@ class MultipleInheritance:
         for col in merge_geometry_columns:
             for table_def in self.joins.values():
                 gt = geometry_type(
-                    self.cursor, table_def["table_schema"], table_def["table_name"], col
+                    self.conn, table_def["table_schema"], table_def["table_name"], col
                 )
                 if gt:
                     self.merge_column_cast[col] = "::geometry({type},{srid})".format(
@@ -177,10 +166,15 @@ class MultipleInheritance:
                 raise InvalidDefinition(f'There is no geometry column "{col}" in joined tables')
         self.merge_columns = definition.get("merge_columns", []) + merge_geometry_columns
 
-    def create(self) -> bool:
+    def create(self, commit: bool = True) -> bool:
         """
         Creates the merge view on the specified service
         Returns True in case of success
+
+        Parameters
+        ----------
+        commit : bool
+            If True, commits the transaction after executing queries.
         """
         queries = []
         success = True
@@ -197,7 +191,8 @@ class MultipleInheritance:
             if not _sql:
                 continue
             try:
-                self.cursor.execute(psycopg.sql.SQL(_sql).format(**self.variables))
+                cursor = self.conn.cursor()
+                cursor.execute(psycopg.sql.SQL(_sql).format(**self.variables))
             except (TypeError, KeyError):
                 success = False
                 print(f"*** Failing:\n{_sql}\n***")
@@ -212,20 +207,20 @@ class MultipleInheritance:
             except psycopg.Error as e:
                 print(f"*** Failing:\n{_sql}\n***")
                 raise e
-        self.conn.commit()
-        self.conn.close()
+        if commit:
+            self.conn.commit()
 
         if self.create_joins:
             for alias, table_def in self.joins.items():
                 success &= SingleInheritance(
-                    pg_service=self.pg_service,
+                    connection=self.conn,
                     parent_table=f"{self.master_schema}.{self.master_table}",
                     child_table="{s}.{t}".format(
                         s=table_def["table_schema"], t=table_def["table_name"]
                     ),
                     view_name=f"vw_{alias}",
                     view_schema=self.view_schema,
-                ).create()
+                ).create(commit=commit)
         return success
 
     def __drops(self) -> str:
@@ -287,9 +282,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
             ),
             type_name=self.type_name,
             master_columns=select_columns(
-                self.cursor,
-                self.master_schema,
-                self.master_table,
+                connection=self.conn,
+                table_schema=self.master_schema,
+                table_name=self.master_table,
                 table_alias=self.view_alias,
                 skip_columns=self.master_skip_colums,
                 prefix=self.master_prefix,
@@ -314,9 +309,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                 for alias, table_def in sorted_joins
                                 if col
                                 in columns(
-                                    self.cursor,
-                                    table_def["table_schema"],
-                                    table_def["table_name"],
+                                    connection=self.conn,
+                                    table_schema=table_def["table_schema"],
+                                    table_name=table_def["table_name"],
                                     skip_columns=table_def.get("skip_columns", []),
                                 )
                             ]
@@ -329,9 +324,9 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
             joined_columns="\n    ".join(
                 [
                     select_columns(
-                        self.cursor,
-                        table_def["table_schema"],
-                        table_def["table_name"],
+                        connection=self.conn,
+                        table_schema=table_def["table_schema"],
+                        table_name=table_def["table_name"],
                         table_alias=table_def["short_alias"],
                         skip_columns=table_def.get("skip_columns", [])
                         + [table_def["ref_master_key"]],
@@ -409,9 +404,9 @@ CREATE TRIGGER tr_{vn}_on_insert
             ),
             insert_trigger_pre=self.insert_trigger.get("pre", ""),
             insert_master=insert_command(
-                self.cursor,
-                self.master_schema,
-                self.master_table,
+                connection=self.conn,
+                table_schema=self.master_schema,
+                table_name=self.master_table,
                 skip_columns=self.master_skip_colums,
                 prefix=self.master_prefix,
                 remap_columns=self.master_remap_columns,
@@ -428,9 +423,9 @@ CREATE TRIGGER tr_{vn}_on_insert
                         alias=alias,
                         vs=self.view_schema,
                         insert_join=insert_command(
-                            self.cursor,
-                            table_def["table_schema"],
-                            table_def["table_name"],
+                            connection=self.conn,
+                            table_schema=table_def["table_schema"],
+                            table_name=table_def["table_name"],
                             table_alias=table_def["short_alias"],
                             skip_columns=table_def.get("skip_columns", []),
                             prefix=table_def.get("prefix", None),
@@ -500,9 +495,9 @@ CREATE TRIGGER tr_{vn}_on_update
             ),
             update_trigger_pre=self.update_trigger.get("pre", ""),
             update_master=update_command(
-                self.cursor,
-                self.master_schema,
-                self.master_table,
+                connection=self.conn,
+                table_schema=self.master_schema,
+                table_name=self.master_table,
                 skip_columns=self.master_skip_colums,
                 prefix=self.master_prefix,
                 remap_columns=self.master_remap_columns,
@@ -565,9 +560,9 @@ CREATE TRIGGER tr_{vn}_on_update
                         alias=alias,
                         vs=self.view_schema,
                         update_join=update_command(
-                            self.cursor,
-                            table_def["table_schema"],
-                            table_def["table_name"],
+                            connection=self.conn,
+                            table_schema=table_def["table_schema"],
+                            table_name=table_def["table_name"],
                             table_alias=table_def["short_alias"],
                             pkey=table_def["pkey"],
                             skip_columns=table_def.get("skip_columns", []),
@@ -648,7 +643,7 @@ CREATE TRIGGER tr_{vn}_on_delete
                 vn=self.view_name,
                 master_pkey=self.master_pkey,
                 dv=default_value(
-                    self.cursor, self.master_schema, self.master_table, self.master_pkey
+                    self.conn, self.master_schema, self.master_table, self.master_pkey
                 ),
             )
         return sql

@@ -3,6 +3,7 @@
 import argparse
 import os
 
+import psycopg
 import yaml
 
 from pirogue.multiple_inheritance import MultipleInheritance
@@ -97,11 +98,13 @@ def main():
     else:
         pg_service = os.getenv("PGSERVICE")
 
+    conn = psycopg.connect(f"service={pg_service}")
+
     if args.command == "single_inheritance":
         success = SingleInheritance(
             parent_table=args.parent_table,
             child_table=args.child_table,
-            pg_service=pg_service,
+            connection=conn,
             view_schema=args.view_schema,
             view_name=args.view_name,
             pkey_default_value=args.pkey_default_value,
@@ -123,12 +126,12 @@ def main():
             yaml_definition,
             variables=variables,
             create_joins=args.create_joins,
-            pg_service=pg_service,
+            connection=conn,
         ).create()
 
     elif args.command == "simple_joins":
         yaml_definition = yaml.safe_load(args.definition_file)
-        SimpleJoins(yaml_definition, pg_service=pg_service).create()
+        SimpleJoins(yaml_definition, connection=conn).create()
 
     exit(exit_val)
 
