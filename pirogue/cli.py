@@ -104,7 +104,7 @@ def main():
         success = SingleInheritance(
             parent_table=args.parent_table,
             child_table=args.child_table,
-            conn=conn,
+            connection=conn,
             view_schema=args.view_schema,
             view_name=args.view_name,
             pkey_default_value=args.pkey_default_value,
@@ -126,12 +126,12 @@ def main():
             yaml_definition,
             variables=variables,
             create_joins=args.create_joins,
-            conn=conn,
+            connection=conn,
         ).create()
 
     elif args.command == "simple_joins":
         yaml_definition = yaml.safe_load(args.definition_file)
-        SimpleJoins(yaml_definition, conn=conn).create()
+        SimpleJoins(yaml_definition, connection=conn).create()
 
     exit(exit_val)
 

@@ -7,7 +7,7 @@ from pirogue.exceptions import (
 )
 
 
-def primary_key(conn: psycopg.Connection, schema_name: str, table_name: str) -> str:
+def primary_key(connection: psycopg.Connection, schema_name: str, table_name: str) -> str:
     """
     Returns the primary of a table
 
@@ -29,7 +29,7 @@ def primary_key(conn: psycopg.Connection, schema_name: str, table_name: str) -> 
         " AND t.table_schema = '{s}'"
         " AND t.constraint_type = 'PRIMARY KEY'".format(s=schema_name, t=table_name)
     )
-    with conn.cursor() as pg_cur:
+    with connection.cursor() as pg_cur:
         pg_cur.execute(sql)
         try:
             pkey = pg_cur.fetchone()[0]
@@ -39,10 +39,11 @@ def primary_key(conn: psycopg.Connection, schema_name: str, table_name: str) -> 
 
 
 def columns(
-    conn,
+    connection: psycopg.Connection,
     table_schema: str,
     table_name: str,
     table_type: str = "table",
+    *,
     remove_pkey: bool = False,
     skip_columns: list = [],
 ) -> list:
@@ -51,7 +52,7 @@ def columns(
 
     Parameters
     ----------
-    conn
+    connection
         psycopg connection
     table_schema
         the table_schema
@@ -87,7 +88,7 @@ def columns(
                 ORDER BY ordinal_position""".format(
             s=table_schema, t=table_name
         )
-    with conn.cursor() as pg_cur:
+    with connection.cursor() as pg_cur:
         pg_cur.execute(sql)
         pg_fields = pg_cur.fetchall()
         pg_fields = [field[0] for field in pg_fields if field[0]]
@@ -101,15 +102,16 @@ def columns(
                     )
                 )
         if remove_pkey:
-            pkey = primary_key(conn, table_schema, table_name)
+            pkey = primary_key(connection, table_schema, table_name)
             pg_fields.remove(pkey)
     return pg_fields
 
 
 def reference_columns(
-    conn: psycopg.Connection,
+    connection: psycopg.Connection,
     table_schema: str,
     table_name: str,
+    *,
     foreign_table_schema: str,
     foreign_table_name: str,
 ) -> tuple[str, str]:
@@ -118,7 +120,7 @@ def reference_columns(
 
     Parameters
     ----------
-    conn
+    connection
         psycopg connection
     table_schema
         the table schema
@@ -147,7 +149,7 @@ def reference_columns(
             tn=table_name, ts=table_schema, ftn=foreign_table_name, fts=foreign_table_schema
         )
     )
-    with conn.cursor() as pg_cur:
+    with connection.cursor() as pg_cur:
         pg_cur.execute(sql)
         cols = pg_cur.fetchone()
         if not cols:
@@ -163,14 +165,14 @@ def reference_columns(
 
 
 def default_value(
-    conn: psycopg.Connection, table_schema: str, table_name: str, column: str
+    connection: psycopg.Connection, table_schema: str, table_name: str, column: str
 ) -> str:
     """
     Returns the default value of the column
 
     Parameters
     ----------
-    conn
+    connection
         psycopg connection
     table_schema
         the table schema
@@ -190,21 +192,21 @@ def default_value(
         "AND    a.attrelid = '{ts}.{tn}'::regclass\n"
         "AND    a.attname = '{col}';".format(ts=table_schema, tn=table_name, col=column)
     )
-    with conn.cursor() as pg_cur:
+    with connection.cursor() as pg_cur:
         pg_cur.execute(sql)
         result = pg_cur.fetchone()
         return result[0] if result and result[0] is not None else "NULL"
 
 
 def geometry_type(
-    conn, table_schema: str, table_name: str, column: str = "geometry"
+    connection: psycopg.Connection, table_schema: str, table_name: str, column: str = "geometry"
 ) -> tuple[str, int] | None:
     """
     Returns the geometry type of a column as a tuple (type, srid)
 
     Parameters
     ----------
-    conn
+    connection
         psycopg connection
     table_schema
         the table schema
@@ -220,7 +222,7 @@ def geometry_type(
         "AND f_table_name = '{t}' "
         "AND f_geometry_column = '{c}';".format(s=table_schema, t=table_name, c=column)
     )
-    with conn.cursor() as pg_cur:
+    with connection.cursor() as pg_cur:
         pg_cur.execute(sql)
         res = pg_cur.fetchone()
         if res:

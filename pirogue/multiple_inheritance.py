@@ -213,7 +213,7 @@ class MultipleInheritance:
         if self.create_joins:
             for alias, table_def in self.joins.items():
                 success &= SingleInheritance(
-                    conn=self.conn,
+                    connection=self.conn,
                     parent_table=f"{self.master_schema}.{self.master_table}",
                     child_table="{s}.{t}".format(
                         s=table_def["table_schema"], t=table_def["table_name"]
@@ -309,7 +309,7 @@ CREATE OR REPLACE VIEW {vs}.{vn} AS
                                 for alias, table_def in sorted_joins
                                 if col
                                 in columns(
-                                    conn=self.conn,
+                                    connection=self.conn,
                                     table_schema=table_def["table_schema"],
                                     table_name=table_def["table_name"],
                                     skip_columns=table_def.get("skip_columns", []),

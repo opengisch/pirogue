@@ -60,7 +60,7 @@ class TestMultipleInheritance(unittest.TestCase):
         yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
         yaml_definition["view_name"] = "vw_animal_no_type_change"
         yaml_definition["allow_type_change"] = False
-        MultipleInheritance(yaml_definition, conn=self.conn).create(commit=True)
+        MultipleInheritance(yaml_definition, connection=self.conn).create(commit=True)
         cur = self.conn.cursor()
         cur.execute(
             "INSERT INTO pirogue_test.vw_animal_no_type_change (animal_type,name,year,fk_cat_breed,eye_color) VALUES ('dog','albert',1933,2,'yellow');"
@@ -77,7 +77,7 @@ class TestMultipleInheritance(unittest.TestCase):
         yaml_definition["MyBadKey"] = "Ouch"
         error_caught = False
         try:
-            MultipleInheritance(yaml_definition, conn=self.conn).create()
+            MultipleInheritance(yaml_definition, connection=self.conn).create()
         except InvalidDefinition:
             error_caught = True
             self.assertTrue(error_caught)
@@ -85,7 +85,7 @@ class TestMultipleInheritance(unittest.TestCase):
     def test_pkey_default_value(self):
         yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
         yaml_definition["pkey_default_value"] = True
-        MultipleInheritance(yaml_definition, conn=self.conn).create()
+        MultipleInheritance(yaml_definition, connection=self.conn).create()
         self.assertEqual(
             default_value(self.conn, "pirogue_test", "animal", "aid"),
             default_value(self.conn, "pirogue_test", "vw_merge_animal", "aid"),
@@ -94,7 +94,7 @@ class TestMultipleInheritance(unittest.TestCase):
     def test_merge_no_columns(self):
         yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
         yaml_definition["joins"]["aardvark"]["skip_columns"] = ["aid", "father"]
-        MultipleInheritance(yaml_definition, conn=self.conn).create()
+        MultipleInheritance(yaml_definition, connection=self.conn).create()
 
 
 if __name__ == "__main__":
