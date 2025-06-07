@@ -138,8 +138,8 @@ class MultipleInheritance:
                     self.conn,
                     table_def["table_schema"],
                     table_def["table_name"],
-                    self.master_schema,
-                    self.master_table,
+                    foreign_table_schema=self.master_schema,
+                    foreign_table_name=self.master_table,
                 )[0]
             try:
                 table_def["pkey"] = primary_key(

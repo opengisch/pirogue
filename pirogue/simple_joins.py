@@ -71,8 +71,8 @@ class SimpleJoins:
                     self.conn,
                     self.parent_schema,
                     self.parent_table,
-                    child.schema_name,
-                    child.table_name,
+                    foreign_table_schema=child.schema_name,
+                    foreign_table_name=child.table_name,
                 )
                 assert child.pkey == child.ref_parent_key
             except NoReferenceFound:

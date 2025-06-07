@@ -29,16 +29,16 @@ class TestSimpleJoins(unittest.TestCase):
 
     def test_based_on_view(self):
         yaml_definition = yaml.safe_load(open("test/multiple_inheritance.yaml"))
-        MultipleInheritance(yaml_definition, connection=self.conn).create()
+        MultipleInheritance(definition=yaml_definition, connection=self.conn).create()
         yaml_definition = yaml.safe_load(open("test/simple_joins_based_on_view.yaml"))
-        SimpleJoins(yaml_definition, connection=self.conn).create()
+        SimpleJoins(definition=yaml_definition, connection=self.conn).create()
 
     def test_invalid_definition(self):
         yaml_definition = yaml.safe_load(open("test/simple_joins.yaml"))
         yaml_definition["MyBadKey"] = "Ouch"
         error_caught = False
         try:
-            SimpleJoins(yaml_definition, connection=self.conn).create()
+            SimpleJoins(definition=yaml_definition, connection=self.conn).create()
         except InvalidDefinition:
             error_caught = True
         self.assertTrue(error_caught)
