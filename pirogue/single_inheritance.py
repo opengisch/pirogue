@@ -65,7 +65,11 @@ class SingleInheritance:
         )
 
         (self.ref_parent_key, parent_referenced_key) = reference_columns(
-            self.conn, self.child_schema, self.child_table, self.parent_schema, self.parent_table
+            self.conn,
+            self.child_schema,
+            self.child_table,
+            foreign_table_schema=self.parent_schema,
+            foreign_table_name=self.parent_table,
         )
         try:
             self.child_pkey = primary_key(self.conn, self.child_schema, self.child_table)
