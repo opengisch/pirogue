@@ -513,10 +513,11 @@ CREATE TRIGGER tr_{vn}_on_update
                 if not self.allow_type_change
                 else "CASE"
                 "\n      {deletes}"
+                "\n    ELSE NULL; --do nothing"
                 "\n    END CASE;"
                 "\n    CASE"
                 "\n      {inserts}"
-                "\n      ELSE -- do nothing"
+                "\n    ELSE NULL; --do nothing"
                 "\n    END CASE;".format(
                     deletes="\n      ".join(
                         [
