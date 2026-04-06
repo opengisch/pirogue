@@ -47,8 +47,8 @@ class SingleInheritance:
         self.pkey_default_value = pkey_default_value
         self.inner_defaults = inner_defaults
 
-        (self.parent_schema, self.parent_table) = table_parts(parent_table)
-        (self.child_schema, self.child_table) = table_parts(child_table)
+        self.parent_schema, self.parent_table = table_parts(parent_table)
+        self.child_schema, self.child_table = table_parts(child_table)
 
         if view_schema is None:
             if self.parent_schema != self.child_schema:
@@ -64,7 +64,7 @@ class SingleInheritance:
             pt=self.parent_table, ct=self.child_table
         )
 
-        (self.ref_parent_key, parent_referenced_key) = reference_columns(
+        self.ref_parent_key, parent_referenced_key = reference_columns(
             self.conn,
             self.child_schema,
             self.child_table,
