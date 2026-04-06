@@ -72,9 +72,7 @@ def columns(
                     WHERE attrelid = '{s}.{t}'::regclass
                     AND attisdropped IS NOT TRUE
                     AND attnum > 0
-                    ORDER BY attnum ASC""".format(
-            s=table_schema, t=table_name
-        )
+                    ORDER BY attnum ASC""".format(s=table_schema, t=table_name)
     else:
         sql = """
             SELECT c.column_name
@@ -85,9 +83,7 @@ def columns(
                 WHERE table_type = 'VIEW'
                       AND t.table_schema = '{s}'
                       AND t.table_name = '{t}'
-                ORDER BY ordinal_position""".format(
-            s=table_schema, t=table_name
-        )
+                ORDER BY ordinal_position""".format(s=table_schema, t=table_name)
     with connection.cursor() as pg_cur:
         pg_cur.execute(sql)
         pg_fields = pg_cur.fetchall()
