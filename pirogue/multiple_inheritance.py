@@ -98,7 +98,7 @@ class MultipleInheritance:
                 if key not in ("declare", "pre", "post"):
                     raise InvalidDefinition(f"key {key} is not valid in trigger definitions")
 
-        (self.master_schema, self.master_table) = table_parts(definition.get("table", None))
+        self.master_schema, self.master_table = table_parts(definition.get("table", None))
         self.master_skip_colums = definition.get("skip_columns", [])
         self.master_prefix = definition.get("prefix", None)
         self.master_remap_columns = definition.get("remap_columns", {})
@@ -128,7 +128,7 @@ class MultipleInheritance:
         self.joins = definition["joins"]
         self.joined_ref_master_key = []
         for alias, table_def in self.joins.items():
-            (table_def["table_schema"], table_def["table_name"]) = table_parts(table_def["table"])
+            table_def["table_schema"], table_def["table_name"] = table_parts(table_def["table"])
             table_def["short_alias"] = table_def.get("short_alias", alias)
 
             if "fkey" in table_def:
