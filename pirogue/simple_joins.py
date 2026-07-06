@@ -41,7 +41,7 @@ class SimpleJoins:
 
         self.conn = connection
 
-        (self.parent_schema, self.parent_table) = table_parts(definition["table"])
+        self.parent_schema, self.parent_table = table_parts(definition["table"])
         self.view_schema = definition.get("view_schema", self.parent_schema)
         self.view_name = definition.get("view_name", f"vw_{self.parent_table}")
 
@@ -64,10 +64,10 @@ class SimpleJoins:
         self.child_tables = {}
         for alias, table_def in definition["joins"].items():
             child = Table()
-            (child.schema_name, child.table_name) = table_parts(table_def["table"])
+            child.schema_name, child.table_name = table_parts(table_def["table"])
             child.pkey = primary_key(self.conn, child.schema_name, child.table_name)
             try:
-                (child.parent_referenced_key, child.ref_parent_key) = reference_columns(
+                child.parent_referenced_key, child.ref_parent_key = reference_columns(
                     self.conn,
                     self.parent_schema,
                     self.parent_table,
